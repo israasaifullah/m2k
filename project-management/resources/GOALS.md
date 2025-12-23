@@ -1,0 +1,1 @@
+1. Develop a optimum size of software to visualise the progress of a project in kanban view.
