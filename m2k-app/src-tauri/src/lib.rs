@@ -1,14 +1,35 @@
 mod claude;
+mod claude_cli;
 mod parser;
 mod watcher;
 
 use claude::GeneratedEpic;
+use claude_cli::ClaudeCliResult;
 use keyring::Entry;
 use parser::{Epic, Ticket};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use tauri::AppHandle;
+use tokio::sync::Mutex;
+
+// Global state for managing Claude CLI execution
+static CLAUDE_CLI_STOP_FLAG: std::sync::OnceLock<Arc<AtomicBool>> = std::sync::OnceLock::new();
+static CLAUDE_CLI_RUNNING: std::sync::OnceLock<Arc<Mutex<bool>>> = std::sync::OnceLock::new();
+
+fn get_stop_flag() -> Arc<AtomicBool> {
+    CLAUDE_CLI_STOP_FLAG
+        .get_or_init(|| Arc::new(AtomicBool::new(false)))
+        .clone()
+}
+
+fn get_running_flag() -> Arc<Mutex<bool>> {
+    CLAUDE_CLI_RUNNING
+        .get_or_init(|| Arc::new(Mutex::new(false)))
+        .clone()
+}
 
 const KEYRING_SERVICE: &str = "m2k-app";
 const KEYRING_USER: &str = "anthropic-api-key";
@@ -178,6 +199,58 @@ fn get_next_ticket_id(project_path: String) -> Result<u32, String> {
 }
 
 #[tauri::command]
+fn check_claude_cli() -> Result<bool, String> {
+    claude_cli::check_claude_code_installed()
+}
+
+#[tauri::command]
+fn get_claude_cli_version() -> Result<Option<String>, String> {
+    claude_cli::get_claude_code_version()
+}
+
+#[tauri::command]
+async fn start_claude_cli(
+    app: AppHandle,
+    prompt: String,
+    working_dir: String,
+) -> Result<ClaudeCliResult, String> {
+    let running = get_running_flag();
+    let mut is_running = running.lock().await;
+
+    if *is_running {
+        return Err("Claude Code is already running".to_string());
+    }
+
+    *is_running = true;
+    let stop_flag = get_stop_flag();
+    stop_flag.store(false, Ordering::Relaxed);
+
+    drop(is_running); // Release lock before long operation
+
+    let result = claude_cli::execute_claude_code(app, prompt, working_dir, stop_flag).await;
+
+    // Reset running state
+    let mut is_running = running.lock().await;
+    *is_running = false;
+
+    result
+}
+
+#[tauri::command]
+async fn stop_claude_cli() -> Result<(), String> {
+    let stop_flag = get_stop_flag();
+    stop_flag.store(true, Ordering::Relaxed);
+    Ok(())
+}
+
+#[tauri::command]
+async fn is_claude_cli_running() -> Result<bool, String> {
+    let running = get_running_flag();
+    let is_running = running.lock().await;
+    Ok(*is_running)
+}
+
+#[tauri::command]
 async fn generate_epic(
     project_path: String,
     requirements: String,
@@ -207,7 +280,12 @@ pub fn run() {
             read_markdown_file,
             get_next_epic_id,
             get_next_ticket_id,
-            generate_epic
+            generate_epic,
+            check_claude_cli,
+            get_claude_cli_version,
+            start_claude_cli,
+            stop_claude_cli,
+            is_claude_cli_running
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

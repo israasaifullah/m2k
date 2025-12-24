@@ -1,10 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { useAppStore } from "../lib/store";
 
 interface ConfirmationDialogProps {
   epicId: string;
   epicTitle: string;
   ticketCount: number;
+  cliInstalled: boolean | null;
+  cliVersion: string | null;
+  error: string | null;
+  starting: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -13,22 +18,28 @@ function ConfirmationDialog({
   epicId,
   epicTitle,
   ticketCount,
+  cliInstalled,
+  cliVersion,
+  error,
+  starting,
   onConfirm,
   onCancel,
 }: ConfirmationDialogProps) {
   // Close on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCancel();
+      if (e.key === "Escape" && !starting) onCancel();
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onCancel]);
+  }, [onCancel, starting]);
+
+  const canStart = cliInstalled === true && !starting;
 
   return (
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in"
-      onClick={onCancel}
+      onClick={starting ? undefined : onCancel}
       role="dialog"
       aria-modal="true"
       aria-labelledby="dialog-title"
@@ -63,7 +74,31 @@ function ConfirmationDialog({
               {ticketCount} ticket{ticketCount !== 1 ? "s" : ""}
             </span>
           </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-[var(--geist-accents-5)]">Claude CLI:</span>
+            {cliInstalled === null ? (
+              <span className="text-sm text-[var(--geist-accents-4)]">Checking...</span>
+            ) : cliInstalled ? (
+              <span className="text-sm text-[var(--geist-success)]">
+                Installed {cliVersion && `(${cliVersion})`}
+              </span>
+            ) : (
+              <span className="text-sm text-[var(--geist-error)]">Not installed</span>
+            )}
+          </div>
         </div>
+
+        {!cliInstalled && cliInstalled !== null && (
+          <div className="p-3 mb-4 bg-[var(--geist-error-light)] border border-[var(--geist-error)] rounded-lg text-sm text-[var(--geist-error)]">
+            Claude Code CLI is not installed. Install it with: npm install -g @anthropic-ai/claude-code
+          </div>
+        )}
+
+        {error && (
+          <div className="p-3 mb-4 bg-[var(--geist-error-light)] border border-[var(--geist-error)] rounded-lg text-sm text-[var(--geist-error)]">
+            {error}
+          </div>
+        )}
 
         <p className="text-sm text-[var(--geist-accents-5)] mb-6">
           This will start Claude Code to work on all tickets in this epic sequentially.
@@ -72,15 +107,17 @@ function ConfirmationDialog({
         <div className="flex justify-end gap-3">
           <button
             onClick={onCancel}
-            className="px-4 py-2 text-sm border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]"
+            disabled={starting}
+            className="px-4 py-2 text-sm border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className="px-4 py-2 text-sm bg-[var(--geist-success)] text-white rounded-full hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]"
+            disabled={!canStart}
+            className="px-4 py-2 text-sm bg-[var(--geist-success)] text-white rounded-full hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50"
           >
-            Start Epic
+            {starting ? "Starting..." : "Start Epic"}
           </button>
         </div>
       </div>
@@ -92,25 +129,73 @@ export function StartEpicButton() {
   const selectedEpic = useAppStore((s) => s.selectedEpic);
   const epics = useAppStore((s) => s.epics);
   const tickets = useAppStore((s) => s.tickets);
+  const projectPath = useAppStore((s) => s.projectPath);
   const [showDialog, setShowDialog] = useState(false);
+  const [cliInstalled, setCliInstalled] = useState<boolean | null>(null);
+  const [cliVersion, setCliVersion] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
 
   const epic = epics.find((e) => e.id === selectedEpic);
   const epicTickets = tickets.filter((t) => t.epic === selectedEpic);
   const hasInProgressTickets = epicTickets.some((t) => t.status === "in_progress");
 
+  // Check CLI installation when dialog opens
+  useEffect(() => {
+    if (showDialog) {
+      setCliInstalled(null);
+      setCliVersion(null);
+      setError(null);
+
+      const checkCli = async () => {
+        try {
+          const installed = await invoke<boolean>("check_claude_cli");
+          setCliInstalled(installed);
+          if (installed) {
+            const version = await invoke<string | null>("get_claude_cli_version");
+            setCliVersion(version);
+          }
+        } catch (err) {
+          setCliInstalled(false);
+          setError(err instanceof Error ? err.message : String(err));
+        }
+      };
+      checkCli();
+    }
+  }, [showDialog]);
+
   const handleStartClick = useCallback(() => {
     setShowDialog(true);
   }, []);
 
-  const handleConfirm = useCallback(() => {
-    setShowDialog(false);
-    // TODO: T-053 will implement actual Claude Code CLI execution
-    console.log("Starting epic:", selectedEpic);
-  }, [selectedEpic]);
+  const handleConfirm = useCallback(async () => {
+    if (!projectPath || !selectedEpic) return;
+
+    setStarting(true);
+    setError(null);
+
+    try {
+      // Build prompt for the epic (basic version - T-054 will enhance this)
+      const prompt = `Work on epic ${selectedEpic}: ${epic?.title}. Process all tickets sequentially.`;
+
+      await invoke("start_claude_cli", {
+        prompt,
+        workingDir: projectPath,
+      });
+
+      setShowDialog(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setStarting(false);
+    }
+  }, [projectPath, selectedEpic, epic]);
 
   const handleCancel = useCallback(() => {
-    setShowDialog(false);
-  }, []);
+    if (!starting) {
+      setShowDialog(false);
+    }
+  }, [starting]);
 
   if (!selectedEpic || !epic) {
     return null;
@@ -133,6 +218,10 @@ export function StartEpicButton() {
           epicId={epic.id}
           epicTitle={epic.title}
           ticketCount={epicTickets.length}
+          cliInstalled={cliInstalled}
+          cliVersion={cliVersion}
+          error={error}
+          starting={starting}
           onConfirm={handleConfirm}
           onCancel={handleCancel}
         />
