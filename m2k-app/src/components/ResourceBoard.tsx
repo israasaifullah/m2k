@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronRight, ChevronDown, Folder, File, FileText, Image, FileCode, Search, X, Plus, FolderPlus, Edit2, Trash2, MoreVertical, Save } from "lucide-react";
+import { ChevronRight, ChevronDown, Folder, File, FileText, Image, FileCode, Search, X, Plus, FolderPlus, Edit2, Trash2, Save } from "lucide-react";
 import { useAppStore } from "../lib/store";
 import { invoke } from "@tauri-apps/api/core";
 import { MarkdownEditor } from "./MarkdownEditor";
