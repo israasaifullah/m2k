@@ -5,6 +5,7 @@ use std::path::Path;
 use walkdir::WalkDir;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Ticket {
     pub id: String,
     pub title: String,

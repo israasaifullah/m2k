@@ -16,7 +16,7 @@ interface Props {
 export function KanbanColumn({ title, tickets }: Props) {
   return (
     <section
-      className="flex flex-col bg-[var(--geist-accents-1)] rounded-lg overflow-hidden border border-[var(--geist-accents-2)] max-h-[300px] md:max-h-none md:h-full"
+      className="flex flex-col bg-[var(--geist-accents-1)] rounded-lg overflow-hidden border border-[var(--geist-accents-2)] max-h-[300px] md:max-h-none md:h-full w-[300px] shrink-0"
       aria-label={`${title} column with ${tickets.length} tickets`}
     >
       <header className="px-3 md:px-4 py-2 md:py-3 border-b border-[var(--geist-accents-2)] flex items-center justify-between shrink-0">

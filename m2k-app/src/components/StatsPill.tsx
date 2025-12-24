@@ -5,7 +5,7 @@ interface StatsPillProps {
   label: string;
   value: string | number;
   color?: "blue" | "green" | "purple" | "orange" | "red" | "default";
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
 }
 
 const colorClasses = {
@@ -27,18 +27,21 @@ const iconColorClasses = {
 };
 
 const sizeClasses = {
+  xs: "px-2 py-1 gap-1.5",
   sm: "px-3 py-2 gap-2",
   md: "px-4 py-3 gap-3",
   lg: "px-5 py-4 gap-4",
 };
 
 const iconSizes = {
+  xs: 12,
   sm: 16,
   md: 20,
   lg: 24,
 };
 
 const textSizes = {
+  xs: { label: "text-[10px]", value: "text-xs" },
   sm: { label: "text-xs", value: "text-sm" },
   md: { label: "text-xs", value: "text-lg" },
   lg: { label: "text-sm", value: "text-xl" },
@@ -49,7 +52,7 @@ export function StatsPill({
   label,
   value,
   color = "default",
-  size = "md",
+  size = "sm",
 }: StatsPillProps) {
   return (
     <div

@@ -1,0 +1,201 @@
+use rusqlite::{Connection, Result as SqliteResult};
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+use std::sync::Mutex;
+
+lazy_static::lazy_static! {
+    static ref DB_CONNECTION: Mutex<Option<Connection>> = Mutex::new(None);
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Project {
+    pub id: i64,
+    pub name: String,
+    pub path: String,
+    pub created_at: String,
+    pub last_accessed: String,
+}
+
+fn get_db_path() -> Option<PathBuf> {
+    dirs::data_dir().map(|p| p.join("m2k-app").join("projects.db"))
+}
+
+pub fn init_database() -> Result<(), String> {
+    let db_path = get_db_path().ok_or("Could not determine data directory")?;
+
+    if let Some(parent) = db_path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create data directory: {}", e))?;
+    }
+
+    let conn = Connection::open(&db_path)
+        .map_err(|e| format!("Failed to open database: {}", e))?;
+
+    // Create projects table with indexes
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            path TEXT NOT NULL UNIQUE,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            last_accessed TEXT NOT NULL DEFAULT (datetime('now'))
+        )",
+        [],
+    ).map_err(|e| format!("Failed to create projects table: {}", e))?;
+
+    // Create indexes
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_projects_path ON projects(path)",
+        [],
+    ).map_err(|e| format!("Failed to create path index: {}", e))?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_projects_name ON projects(name)",
+        [],
+    ).map_err(|e| format!("Failed to create name index: {}", e))?;
+
+    // Create app_state table for persisting active project and sidebar state
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS app_state (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )",
+        [],
+    ).map_err(|e| format!("Failed to create app_state table: {}", e))?;
+
+    let mut db_conn = DB_CONNECTION.lock().map_err(|e| e.to_string())?;
+    *db_conn = Some(conn);
+
+    Ok(())
+}
+
+fn with_connection<T, F>(f: F) -> Result<T, String>
+where
+    F: FnOnce(&Connection) -> SqliteResult<T>,
+{
+    let db_conn = DB_CONNECTION.lock().map_err(|e| e.to_string())?;
+    let conn = db_conn.as_ref().ok_or("Database not initialized")?;
+    f(conn).map_err(|e| format!("Database error: {}", e))
+}
+
+pub fn add_project(name: &str, path: &str) -> Result<Project, String> {
+    with_connection(|conn| {
+        conn.execute(
+            "INSERT INTO projects (name, path) VALUES (?1, ?2)",
+            [name, path],
+        )?;
+
+        let id = conn.last_insert_rowid();
+        let mut stmt = conn.prepare("SELECT id, name, path, created_at, last_accessed FROM projects WHERE id = ?1")?;
+        stmt.query_row([id], |row| {
+            Ok(Project {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                path: row.get(2)?,
+                created_at: row.get(3)?,
+                last_accessed: row.get(4)?,
+            })
+        })
+    })
+}
+
+pub fn get_all_projects() -> Result<Vec<Project>, String> {
+    with_connection(|conn| {
+        let mut stmt = conn.prepare(
+            "SELECT id, name, path, created_at, last_accessed FROM projects ORDER BY last_accessed DESC"
+        )?;
+
+        let projects = stmt.query_map([], |row| {
+            Ok(Project {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                path: row.get(2)?,
+                created_at: row.get(3)?,
+                last_accessed: row.get(4)?,
+            })
+        })?;
+
+        projects.collect()
+    })
+}
+
+pub fn get_project_by_path(path: &str) -> Result<Option<Project>, String> {
+    with_connection(|conn| {
+        let mut stmt = conn.prepare(
+            "SELECT id, name, path, created_at, last_accessed FROM projects WHERE path = ?1"
+        )?;
+
+        match stmt.query_row([path], |row| {
+            Ok(Project {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                path: row.get(2)?,
+                created_at: row.get(3)?,
+                last_accessed: row.get(4)?,
+            })
+        }) {
+            Ok(project) => Ok(Some(project)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(e),
+        }
+    })
+}
+
+pub fn update_last_accessed(id: i64) -> Result<(), String> {
+    with_connection(|conn| {
+        conn.execute(
+            "UPDATE projects SET last_accessed = datetime('now') WHERE id = ?1",
+            [id],
+        )?;
+        Ok(())
+    })
+}
+
+pub fn rename_project(id: i64, new_name: &str) -> Result<(), String> {
+    with_connection(|conn| {
+        conn.execute(
+            "UPDATE projects SET name = ?1 WHERE id = ?2",
+            rusqlite::params![new_name, id],
+        )?;
+        Ok(())
+    })
+}
+
+pub fn remove_project(id: i64) -> Result<(), String> {
+    with_connection(|conn| {
+        conn.execute("DELETE FROM projects WHERE id = ?1", [id])?;
+        Ok(())
+    })
+}
+
+pub fn set_app_state(key: &str, value: &str) -> Result<(), String> {
+    with_connection(|conn| {
+        conn.execute(
+            "INSERT OR REPLACE INTO app_state (key, value) VALUES (?1, ?2)",
+            [key, value],
+        )?;
+        Ok(())
+    })
+}
+
+pub fn get_app_state(key: &str) -> Result<Option<String>, String> {
+    with_connection(|conn| {
+        let mut stmt = conn.prepare("SELECT value FROM app_state WHERE key = ?1")?;
+        match stmt.query_row([key], |row| row.get::<_, String>(0)) {
+            Ok(value) => Ok(Some(value)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(e),
+        }
+    })
+}
+
+pub fn project_path_exists(path: &str) -> Result<bool, String> {
+    with_connection(|conn| {
+        let mut stmt = conn.prepare("SELECT 1 FROM projects WHERE path = ?1")?;
+        match stmt.query_row([path], |_| Ok(())) {
+            Ok(_) => Ok(true),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(false),
+            Err(e) => Err(e),
+        }
+    })
+}

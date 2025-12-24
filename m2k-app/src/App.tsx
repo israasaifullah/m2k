@@ -1,14 +1,11 @@
 import "./App.css";
 import { useEffect } from "react";
-import { Settings, FolderOpen, Plus, Sparkles } from "lucide-react";
-import { StatsBar } from "./components/StatsBar";
 import { KanbanBoard } from "./components/KanbanBoard";
-import { EpicFilter } from "./components/EpicFilter";
-import { StartEpicButton } from "./components/StartEpicButton";
 import { PRDMode } from "./components/PRDMode";
 import { SmartMode } from "./components/SmartMode";
 import { SettingsPage } from "./components/SettingsPage";
-import { ExecutionStatusPanel } from "./components/ExecutionStatusPanel";
+import { Terminal } from "./components/Terminal";
+import { Sidebar } from "./components/Sidebar";
 import { useAppStore } from "./lib/store";
 import { useProjectLoader } from "./hooks/useProjectLoader";
 
@@ -16,35 +13,19 @@ function App() {
   const projectPath = useAppStore((s) => s.projectPath);
   const viewMode = useAppStore((s) => s.viewMode);
   const setViewMode = useAppStore((s) => s.setViewMode);
-  const resetPrdState = useAppStore((s) => s.resetPrdState);
-  const resetSmartModeState = useAppStore((s) => s.resetSmartModeState);
   const { selectFolder } = useProjectLoader();
-
-  const handleCreateNew = () => {
-    resetPrdState();
-    setViewMode("prd");
-  };
-
-  const handleSmartMode = () => {
-    resetSmartModeState();
-    setViewMode("smart");
-  };
-
-  const handleSettings = () => {
-    setViewMode("settings");
-  };
 
   // Keyboard shortcut: Cmd/Ctrl+, for settings
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === ",") {
         e.preventDefault();
-        handleSettings();
+        setViewMode("settings");
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [setViewMode]);
 
   if (!projectPath) {
     return (
@@ -69,64 +50,19 @@ function App() {
   }
 
   return (
-    <main className="h-screen flex flex-col bg-[var(--geist-background)] text-[var(--geist-foreground)]" role="main" aria-label="Kanban board application">
-      <header className="px-3 md:px-4 py-2 md:py-3 border-b border-[var(--geist-accents-2)]" role="banner">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <h1 className="text-lg font-semibold">M2K</h1>
-        <nav className="flex items-center gap-2 md:gap-4 flex-wrap" aria-label="Main controls">
-          {viewMode === "kanban" && (
-            <>
-              <EpicFilter />
-              <StartEpicButton />
-            </>
-          )}
-          <button
-            onClick={handleSmartMode}
-            className="px-2 md:px-3 py-1 md:py-1.5 text-xs md:text-sm bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-md hover:opacity-90 transition-opacity whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] flex items-center gap-1.5"
-            aria-label="Open Smart Mode for AI-powered epic generation"
-          >
-            <Sparkles size={14} aria-hidden="true" />
-            Smart
-          </button>
-          <button
-            onClick={handleCreateNew}
-            className="px-2 md:px-3 py-1 md:py-1.5 text-xs md:text-sm bg-[var(--geist-success)] text-white rounded-md hover:opacity-90 transition-opacity whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] flex items-center gap-1"
-            aria-label="Create new epic or ticket"
-          >
-            <Plus size={14} aria-hidden="true" />
-            New
-          </button>
-          <button
-            onClick={selectFolder}
-            className="px-2 md:px-3 py-1 md:py-1.5 text-xs md:text-sm border border-[var(--geist-accents-3)] rounded-md hover:bg-[var(--geist-accents-1)] transition-colors whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] flex items-center gap-1.5"
-            aria-label="Change project folder"
-          >
-            <FolderOpen size={14} aria-hidden="true" />
-            Folder
-          </button>
-          <button
-            onClick={handleSettings}
-            className="p-1.5 md:p-2 border border-[var(--geist-accents-3)] rounded-md hover:bg-[var(--geist-accents-1)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]"
-            aria-label="Open settings (Cmd+,)"
-            title="Settings (Cmd+,)"
-          >
-            <Settings size={14} aria-hidden="true" />
-          </button>
-        </nav>
+    <main className="h-screen flex bg-[var(--geist-background)] text-[var(--geist-foreground)]" role="main" aria-label="Kanban board application">
+      <Sidebar />
+      <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 min-h-0" role="region" aria-label={viewMode === "kanban" ? "Kanban board" : viewMode === "prd" ? "PRD editor" : viewMode === "smart" ? "Smart Mode" : "Settings"}>
+          {viewMode === "kanban" && <KanbanBoard />}
+          {viewMode === "prd" && <PRDMode />}
+          {viewMode === "smart" && <SmartMode />}
+          {viewMode === "settings" && <SettingsPage />}
         </div>
-        {viewMode === "kanban" && (
-          <div className="mt-2 pt-2 border-t border-[var(--geist-accents-2)]">
-            <StatsBar />
-          </div>
-        )}
-      </header>
-      <div className="flex-1 min-h-0" role="region" aria-label={viewMode === "kanban" ? "Kanban board" : viewMode === "prd" ? "PRD editor" : viewMode === "smart" ? "Smart Mode" : "Settings"}>
-        {viewMode === "kanban" && <KanbanBoard />}
-        {viewMode === "prd" && <PRDMode />}
-        {viewMode === "smart" && <SmartMode />}
-        {viewMode === "settings" && <SettingsPage />}
+        <div className="border-t border-[var(--geist-accents-2)]">
+          <Terminal />
+        </div>
       </div>
-      <ExecutionStatusPanel />
     </main>
   );
 }

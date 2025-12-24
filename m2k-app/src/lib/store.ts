@@ -1,6 +1,14 @@
 import { create } from "zustand";
 import type { Ticket, Epic } from "../types";
 
+export interface RegisteredProject {
+  id: number;
+  name: string;
+  path: string;
+  created_at: string;
+  last_accessed: string;
+}
+
 export type ViewMode = "kanban" | "prd" | "smart" | "settings";
 export type PrdDocType = "epic" | "ticket";
 
@@ -60,6 +68,9 @@ interface AppState {
   smartModeState: SmartModeState;
   executionState: ExecutionState;
   vimMode: boolean;
+  registeredProjects: RegisteredProject[];
+  activeProjectId: number | null;
+  sidebarCollapsed: boolean;
   setTickets: (tickets: Ticket[]) => void;
   setEpics: (epics: Epic[]) => void;
   setSelectedEpic: (epicId: string | null) => void;
@@ -74,6 +85,9 @@ interface AppState {
   resetExecutionState: () => void;
   addExecutionOutput: (line: string) => void;
   setVimMode: (enabled: boolean) => void;
+  setRegisteredProjects: (projects: RegisteredProject[]) => void;
+  setActiveProjectId: (id: number | null) => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
 }
 
 const defaultPrdState: PrdState = {
@@ -111,6 +125,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   smartModeState: { ...defaultSmartModeState },
   executionState: { ...defaultExecutionState },
   vimMode: false,
+  registeredProjects: [],
+  activeProjectId: null,
+  sidebarCollapsed: false,
   setTickets: (tickets) => set({ tickets }),
   setEpics: (epics) => set({ epics }),
   setSelectedEpic: (epicId) => set({ selectedEpic: epicId }),
@@ -134,4 +151,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     },
   })),
   setVimMode: (enabled) => set({ vimMode: enabled }),
+  setRegisteredProjects: (projects) => set({ registeredProjects: projects }),
+  setActiveProjectId: (id) => set({ activeProjectId: id }),
+  setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
 }));

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pencil, ChevronDown, ChevronRight } from "lucide-react";
+import { Pencil, ChevronDown, ChevronRight, Copy, Check } from "lucide-react";
 import type { Ticket } from "../types";
 import { useAppStore } from "../lib/store";
 import { invoke } from "@tauri-apps/api/core";
@@ -30,7 +30,8 @@ function PulsingDot() {
 }
 
 export function TicketCard({ ticket }: Props) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
+  const [copied, setCopied] = useState(false);
   const setPrdState = useAppStore((s) => s.setPrdState);
   const setViewMode = useAppStore((s) => s.setViewMode);
   const epicColor = epicColors[ticket.epic] || "bg-[var(--geist-accents-4)]";
@@ -41,6 +42,22 @@ export function TicketCard({ ticket }: Props) {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       toggle();
+    }
+  };
+
+  const projectPath = useAppStore((s) => s.projectPath);
+
+  const handleCopyPath = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const relativePath = projectPath
+        ? ticket.filePath.replace(projectPath, '.')
+        : ticket.filePath;
+      await navigator.clipboard.writeText(relativePath);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (err) {
+      console.error("Failed to copy path:", err);
     }
   };
 
@@ -62,7 +79,7 @@ export function TicketCard({ ticket }: Props) {
     }
   };
 
-  const baseClass = "rounded-lg p-3 cursor-pointer transition-all duration-200 ease-out animate-fade-in hover:scale-[1.01] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]";
+  const baseClass = "rounded-lg p-4 min-h-[90px] cursor-pointer transition-all duration-200 ease-out animate-fade-in hover:scale-[1.01] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]";
   const cardClass = isInProgress
     ? `${baseClass} bg-[var(--geist-accents-1)] hover:bg-[var(--geist-accents-2)] border border-[var(--geist-success)] animate-pulse-subtle`
     : `${baseClass} bg-[var(--geist-background)] hover:bg-[var(--geist-accents-1)] border border-[var(--geist-accents-2)]`;
@@ -90,14 +107,24 @@ export function TicketCard({ ticket }: Props) {
         <span className="text-xs text-[var(--geist-accents-5)] font-mono">
           {ticket.id}
         </span>
-        <button
-          onClick={handleEdit}
-          className="ml-auto text-xs text-[var(--geist-accents-5)] hover:text-[var(--geist-foreground)] transition-colors px-1.5 py-0.5 rounded hover:bg-[var(--geist-accents-2)] focus:outline-none focus:ring-1 focus:ring-[var(--geist-success)] flex items-center gap-1"
-          aria-label={`Edit ${ticket.id}`}
-        >
-          <Pencil size={12} aria-hidden="true" />
-          Edit
-        </button>
+        <div className="ml-auto flex items-center gap-1">
+          <button
+            onClick={handleCopyPath}
+            className="text-xs text-[var(--geist-accents-5)] hover:text-[var(--geist-foreground)] transition-colors px-1.5 py-0.5 rounded hover:bg-[var(--geist-accents-2)] focus:outline-none focus:ring-1 focus:ring-[var(--geist-success)] flex items-center gap-1"
+            aria-label={`Copy path for ${ticket.id}`}
+            title="Copy file path"
+          >
+            {copied ? <Check size={12} className="text-[var(--geist-success)]" /> : <Copy size={12} />}
+          </button>
+          <button
+            onClick={handleEdit}
+            className="text-xs text-[var(--geist-accents-5)] hover:text-[var(--geist-foreground)] transition-colors px-1.5 py-0.5 rounded hover:bg-[var(--geist-accents-2)] focus:outline-none focus:ring-1 focus:ring-[var(--geist-success)] flex items-center gap-1"
+            aria-label={`Edit ${ticket.id}`}
+          >
+            <Pencil size={12} aria-hidden="true" />
+            Edit
+          </button>
+        </div>
         {isInProgress && (
           <span className="text-xs text-[var(--geist-success)] font-medium animate-pulse" aria-hidden="true">
             Working...

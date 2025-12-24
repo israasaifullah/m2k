@@ -4,15 +4,25 @@
 - Ask the user if there is any unresolved questions.
 
 ## Working on an EPIC
+
+## If user ask to run an entire EPIC 
 - When assign to an epic, find all the tickets related to that epic, work on it 1 by 1 and update the ticket status. If complete, can move the ticket into the /done folder. 
 
 - When you start working on a ticket, put it in the inprogress folder first
 
 - Clear the context after every epic work.
 
-- After every completed execution of epic, create a new branch and make a commit
+- If user start an execution with a full EPIC, after every completed execution of epic, create a new branch and make a commit
+
 - Features Branch: `feature/{epic_tag}/{description}`
 - Bugfixes Branch: `bugfix/{epic_tag}/{description}`
+
+## If user ask to run a single TICKET
+- If user start an execution with a ticket, after every completed execution of ticket, create a new branch and make a commit
+
+- Features Branch: `feature/{ticket_tag}/{description}`
+- Bugfixes Branch: `bugfix/{ticket_tag}/{description}`
+
 
 ### Commit Convention
 Include ticket reference in commit messages:

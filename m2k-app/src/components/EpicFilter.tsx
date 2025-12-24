@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
+import { ChevronDown } from "lucide-react";
 import { useAppStore } from "../lib/store";
 
 export function EpicFilter() {
@@ -14,23 +15,31 @@ export function EpicFilter() {
     });
   }, [epics]);
 
+  // Auto-select latest epic on mount if none selected
+  useEffect(() => {
+    if (!selectedEpic && sortedEpics.length > 0) {
+      const latestEpic = sortedEpics[sortedEpics.length - 1];
+      setSelectedEpic(latestEpic.id);
+    }
+  }, [selectedEpic, sortedEpics, setSelectedEpic]);
+
   return (
-    <div className="flex items-center gap-1.5 md:gap-2">
-      <label htmlFor="epic-filter" className="text-xs md:text-sm text-[var(--geist-accents-5)]">Epic:</label>
+    <div className="relative inline-flex items-center">
       <select
         id="epic-filter"
         value={selectedEpic || ""}
         onChange={(e) => setSelectedEpic(e.target.value || null)}
-        className="px-2 md:px-3 py-1 md:py-1.5 text-xs md:text-sm bg-[var(--geist-accents-1)] border border-[var(--geist-accents-3)] rounded-md text-[var(--geist-foreground)] focus:border-[var(--geist-success)] focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] transition-colors max-w-[150px] md:max-w-none"
+        className="appearance-none px-3 py-1.5 pr-8 text-xs font-medium bg-[var(--geist-accents-1)] border border-[var(--geist-accents-3)] rounded-full text-[var(--geist-foreground)] hover:bg-[var(--geist-accents-2)] focus:border-[var(--geist-success)] focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] transition-all cursor-pointer"
         aria-label="Filter tickets by epic"
       >
-        <option value="">All</option>
+        <option value="">All Epics</option>
         {sortedEpics.map((epic) => (
           <option key={epic.id} value={epic.id}>
             {epic.id}: {epic.title}
           </option>
         ))}
       </select>
+      <ChevronDown size={12} className="absolute right-2.5 pointer-events-none text-[var(--geist-accents-5)]" />
     </div>
   );
 }
