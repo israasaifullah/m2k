@@ -2,6 +2,7 @@ import "./App.css";
 import { KanbanBoard } from "./components/KanbanBoard";
 import { EpicFilter } from "./components/EpicFilter";
 import { PRDMode } from "./components/PRDMode";
+import { SmartMode } from "./components/SmartMode";
 import { useAppStore } from "./lib/store";
 import { useProjectLoader } from "./hooks/useProjectLoader";
 
@@ -10,11 +11,17 @@ function App() {
   const viewMode = useAppStore((s) => s.viewMode);
   const setViewMode = useAppStore((s) => s.setViewMode);
   const resetPrdState = useAppStore((s) => s.resetPrdState);
+  const resetSmartModeState = useAppStore((s) => s.resetSmartModeState);
   const { selectFolder } = useProjectLoader();
 
   const handleCreateNew = () => {
     resetPrdState();
     setViewMode("prd");
+  };
+
+  const handleSmartMode = () => {
+    resetSmartModeState();
+    setViewMode("smart");
   };
 
   if (!projectPath) {
@@ -46,6 +53,13 @@ function App() {
         <nav className="flex items-center gap-2 md:gap-4 flex-wrap" aria-label="Main controls">
           {viewMode === "kanban" && <EpicFilter />}
           <button
+            onClick={handleSmartMode}
+            className="px-2 md:px-3 py-1 md:py-1.5 text-xs md:text-sm bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-md hover:opacity-90 transition-opacity whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]"
+            aria-label="Open Smart Mode for AI-powered epic generation"
+          >
+            Smart
+          </button>
+          <button
             onClick={handleCreateNew}
             className="px-2 md:px-3 py-1 md:py-1.5 text-xs md:text-sm bg-[var(--geist-success)] text-white rounded-md hover:opacity-90 transition-opacity whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]"
             aria-label="Create new epic or ticket"
@@ -61,8 +75,10 @@ function App() {
           </button>
         </nav>
       </header>
-      <div className="flex-1 min-h-0" role="region" aria-label={viewMode === "kanban" ? "Kanban board" : "PRD editor"}>
-        {viewMode === "kanban" ? <KanbanBoard /> : <PRDMode />}
+      <div className="flex-1 min-h-0" role="region" aria-label={viewMode === "kanban" ? "Kanban board" : viewMode === "prd" ? "PRD editor" : "Smart Mode"}>
+        {viewMode === "kanban" && <KanbanBoard />}
+        {viewMode === "prd" && <PRDMode />}
+        {viewMode === "smart" && <SmartMode />}
       </div>
     </main>
   );

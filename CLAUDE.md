@@ -4,7 +4,9 @@
 - Ask the user if there is any unresolved questions.
 
 ## Working on an EPIC
-- When assign to an epic, find all the tickets related to that epic, work on it 1 by 1 and update the ticket status. If complete, can move the ticket into the /done folder. No need to put inside /in-progress when executing it.
+- When assign to an epic, find all the tickets related to that epic, work on it 1 by 1 and update the ticket status. If complete, can move the ticket into the /done folder. 
+
+- When you start working on a ticket, put it in the inprogress folder first
 
 - Clear the context after every epic work.
 

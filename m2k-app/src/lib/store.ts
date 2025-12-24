@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { Ticket, Epic } from "../types";
 
-export type ViewMode = "kanban" | "prd";
+export type ViewMode = "kanban" | "prd" | "smart";
 export type PrdDocType = "epic" | "ticket";
 
 interface PrdState {
@@ -11,6 +11,32 @@ interface PrdState {
   editingPath: string | null;
 }
 
+export interface GeneratedTicket {
+  id: string;
+  title: string;
+  description: string;
+  criteria: string[];
+  technicalNotes: string;
+  dependencies: string;
+  testing: string;
+}
+
+export interface GeneratedEpic {
+  id: string;
+  title: string;
+  scope: string;
+  tickets: GeneratedTicket[];
+}
+
+export type SmartModePhase = "input" | "generating" | "preview";
+
+interface SmartModeState {
+  phase: SmartModePhase;
+  requirements: string;
+  generatedEpic: GeneratedEpic | null;
+  error: string | null;
+}
+
 interface AppState {
   tickets: Ticket[];
   epics: Epic[];
@@ -18,6 +44,7 @@ interface AppState {
   projectPath: string | null;
   viewMode: ViewMode;
   prdState: PrdState;
+  smartModeState: SmartModeState;
   setTickets: (tickets: Ticket[]) => void;
   setEpics: (epics: Epic[]) => void;
   setSelectedEpic: (epicId: string | null) => void;
@@ -26,6 +53,8 @@ interface AppState {
   setViewMode: (mode: ViewMode) => void;
   setPrdState: (state: Partial<PrdState>) => void;
   resetPrdState: () => void;
+  setSmartModeState: (state: Partial<SmartModeState>) => void;
+  resetSmartModeState: () => void;
 }
 
 const defaultPrdState: PrdState = {
@@ -35,6 +64,13 @@ const defaultPrdState: PrdState = {
   editingPath: null,
 };
 
+const defaultSmartModeState: SmartModeState = {
+  phase: "input",
+  requirements: "",
+  generatedEpic: null,
+  error: null,
+};
+
 export const useAppStore = create<AppState>((set, get) => ({
   tickets: [],
   epics: [],
@@ -42,6 +78,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   projectPath: null,
   viewMode: "kanban",
   prdState: { ...defaultPrdState },
+  smartModeState: { ...defaultSmartModeState },
   setTickets: (tickets) => set({ tickets }),
   setEpics: (epics) => set({ epics }),
   setSelectedEpic: (epicId) => set({ selectedEpic: epicId }),
@@ -54,4 +91,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   setViewMode: (mode) => set({ viewMode: mode }),
   setPrdState: (state) => set((s) => ({ prdState: { ...s.prdState, ...state } })),
   resetPrdState: () => set({ prdState: { ...defaultPrdState } }),
+  setSmartModeState: (state) => set((s) => ({ smartModeState: { ...s.smartModeState, ...state } })),
+  resetSmartModeState: () => set({ smartModeState: { ...defaultSmartModeState } }),
 }));
