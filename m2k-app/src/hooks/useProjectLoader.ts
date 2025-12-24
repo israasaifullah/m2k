@@ -30,7 +30,8 @@ export function useProjectLoader() {
     const selected = await open({ directory: true });
     if (selected) {
       setProjectPath(selected);
-      await saveConfig({ project_path: selected, theme: "light" });
+      const currentConfig = await loadConfig();
+      await saveConfig({ ...currentConfig, project_path: selected });
       await loadProject(selected);
     }
   };

@@ -13,10 +13,35 @@ use tauri::AppHandle;
 const KEYRING_SERVICE: &str = "m2k-app";
 const KEYRING_USER: &str = "anthropic-api-key";
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AppConfig {
+    #[serde(default)]
     pub project_path: Option<String>,
+    #[serde(default = "default_theme")]
     pub theme: String,
+    #[serde(default)]
+    pub sidebar_collapsed: bool,
+    #[serde(default = "default_editor_mode")]
+    pub default_editor_mode: String,
+}
+
+fn default_theme() -> String {
+    "dark".to_string()
+}
+
+fn default_editor_mode() -> String {
+    "kanban".to_string()
+}
+
+impl Default for AppConfig {
+    fn default() -> Self {
+        Self {
+            project_path: None,
+            theme: default_theme(),
+            sidebar_collapsed: false,
+            default_editor_mode: default_editor_mode(),
+        }
+    }
 }
 
 fn get_config_path() -> Option<PathBuf> {
@@ -28,10 +53,7 @@ fn load_config() -> Result<AppConfig, String> {
     let config_path = get_config_path().ok_or("Could not determine config directory")?;
 
     if !config_path.exists() {
-        return Ok(AppConfig {
-            project_path: None,
-            theme: "light".to_string(),
-        });
+        return Ok(AppConfig::default());
     }
 
     let content =
