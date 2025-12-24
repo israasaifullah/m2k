@@ -12,4 +12,4 @@ Trigger Claude Code to automatically work on selected epic, executing tickets se
 | T-054 | Build epic-to-prompt converter | done |
 | T-055 | Implement ticket progression handler | done |
 | T-056 | Add execution status monitoring | done |
-| T-057 | Handle Claude Code responses and updates | backlog |
+| T-057 | Handle Claude Code responses and updates | done |

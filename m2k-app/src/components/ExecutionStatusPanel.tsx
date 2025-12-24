@@ -1,7 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { useAppStore } from "../lib/store";
+import { parseOutputLine, parseOutputLines } from "../lib/outputParser";
 
 interface ClaudeCliOutput {
   line: string;
@@ -17,16 +18,39 @@ export function ExecutionStatusPanel() {
 
   const epic = epics.find((e) => e.id === executionState.epicId);
 
-  // Listen for Claude CLI output events
+  // Parse output for ticket completions and other signals
+  const parsedSummary = useMemo(() => {
+    return parseOutputLines(executionState.output);
+  }, [executionState.output]);
+
+  // Listen for Claude CLI output events and parse them
   useEffect(() => {
     const unlisten = listen<ClaudeCliOutput>("claude-cli-output", (event) => {
-      addExecutionOutput(event.payload.line);
+      const line = event.payload.line;
+      addExecutionOutput(line);
+
+      // Parse the line for ticket status changes
+      const parsed = parseOutputLine(line);
+      if (parsed) {
+        if (parsed.type === "ticket_completed" && parsed.ticketId) {
+          const currentCompleted = executionState.completedTickets;
+          if (!currentCompleted.includes(parsed.ticketId)) {
+            setExecutionState({
+              completedTickets: [...currentCompleted, parsed.ticketId],
+            });
+          }
+        } else if (parsed.type === "ticket_started" && parsed.ticketId) {
+          setExecutionState({
+            currentTicketId: parsed.ticketId,
+          });
+        }
+      }
     });
 
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [addExecutionOutput]);
+  }, [addExecutionOutput, executionState.completedTickets, setExecutionState]);
 
   // Auto-scroll output
   useEffect(() => {
@@ -147,6 +171,22 @@ export function ExecutionStatusPanel() {
         {executionState.error && (
           <div className="p-2 bg-[var(--geist-error-light)] border border-[var(--geist-error)] rounded text-xs text-[var(--geist-error)]">
             {executionState.error}
+          </div>
+        )}
+
+        {/* Completion summary */}
+        {executionState.status === "completed" && (
+          <div className="p-3 bg-[var(--geist-success-light)] border border-[var(--geist-success)] rounded text-sm">
+            <div className="font-medium text-[var(--geist-success-dark)] mb-2">
+              Epic Completed!
+            </div>
+            <div className="text-xs text-[var(--geist-success-dark)] space-y-1">
+              <div>Tickets: {executionState.completedTickets.length}/{executionState.totalTickets}</div>
+              {parsedSummary.commits.length > 0 && (
+                <div>Commits: {parsedSummary.commits.length}</div>
+              )}
+              <div>Duration: {elapsedMinutes}m {elapsedSeconds}s</div>
+            </div>
           </div>
         )}
 
