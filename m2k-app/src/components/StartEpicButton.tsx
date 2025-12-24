@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useAppStore } from "../lib/store";
+import { buildEpicPrompt } from "../lib/promptBuilder";
 
 interface ConfirmationDialogProps {
   epicId: string;
@@ -169,14 +170,18 @@ export function StartEpicButton() {
   }, []);
 
   const handleConfirm = useCallback(async () => {
-    if (!projectPath || !selectedEpic) return;
+    if (!projectPath || !selectedEpic || !epic) return;
 
     setStarting(true);
     setError(null);
 
     try {
-      // Build prompt for the epic (basic version - T-054 will enhance this)
-      const prompt = `Work on epic ${selectedEpic}: ${epic?.title}. Process all tickets sequentially.`;
+      // Build comprehensive prompt for the epic
+      const prompt = buildEpicPrompt({
+        epic,
+        tickets: epicTickets,
+        projectPath,
+      });
 
       await invoke("start_claude_cli", {
         prompt,
@@ -189,7 +194,7 @@ export function StartEpicButton() {
     } finally {
       setStarting(false);
     }
-  }, [projectPath, selectedEpic, epic]);
+  }, [projectPath, selectedEpic, epic, epicTickets]);
 
   const handleCancel = useCallback(() => {
     if (!starting) {
