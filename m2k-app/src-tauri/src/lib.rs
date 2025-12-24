@@ -162,6 +162,8 @@ fn start_watcher(app: AppHandle, path: String) -> Result<(), String> {
 
 #[tauri::command]
 fn save_markdown_file(path: String, content: String) -> Result<(), String> {
+    // log the path
+    log::info!("Saving markdown file to: {}", path);
     fs::write(&path, content).map_err(|e| format!("Failed to write file: {}", e))
 }
 
@@ -256,7 +258,7 @@ fn move_ticket_to_status(
     ticket_id: String,
     new_status: String,
 ) -> Result<(), String> {
-    let project_dir = PathBuf::from(&project_path).join("project-management");
+    let project_dir = PathBuf::from(&project_path).join(".m2k");
 
     // Find the current ticket file
     let folders = ["backlog", "inprogress", "done"];
@@ -300,7 +302,7 @@ fn update_epic_ticket_status(
     new_status: String,
 ) -> Result<(), String> {
     let epics_dir = PathBuf::from(&project_path)
-        .join("project-management")
+        .join(".m2k")
         .join("epics");
 
     // Find the epic file

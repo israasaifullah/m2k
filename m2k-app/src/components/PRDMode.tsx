@@ -131,7 +131,7 @@ export function PRDMode() {
         const safeName = title
           .replace(/[^a-zA-Z0-9\s-]/g, "")
           .replace(/\s+/g, "-");
-        const filePath = `${projectPath}/project-management/epics/EPIC-${paddedId}-${safeName}.md`;
+        const filePath = `${projectPath}/.m2k/epics/EPIC-${paddedId}-${safeName}.md`;
         const content = prdState.content.replace(
           /EPIC-\{ID\}/g,
           `EPIC-${paddedId}`
@@ -148,7 +148,7 @@ export function PRDMode() {
           projectPath,
         });
         const paddedId = nextId.toString().padStart(3, "0");
-        const filePath = `${projectPath}/project-management/backlog/T-${paddedId}.md`;
+        const filePath = `${projectPath}/.m2k/backlog/T-${paddedId}.md`;
         let content = prdState.content
           .replace(/T-\{ID\}/g, `T-${paddedId}`)
           .replace(/EPIC-\{EPIC_ID\}/g, selectedEpic)

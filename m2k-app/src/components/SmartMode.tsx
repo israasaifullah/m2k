@@ -141,14 +141,14 @@ function PreviewMode({
   const [files, setFiles] = useState<PreviewFile[]>(() => {
     const epicFile: PreviewFile = {
       name: `${epic.id}-${epic.title.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-')}.md`,
-      path: `${projectPath}/project-management/epics/${epic.id}-${epic.title.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-')}.md`,
+      path: `${projectPath}/.m2k/epics/${epic.id}-${epic.title.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-')}.md`,
       content: generateEpicMarkdown(epic),
       type: 'epic',
     };
 
     const ticketFiles: PreviewFile[] = epic.tickets.map(ticket => ({
       name: `${ticket.id}.md`,
-      path: `${projectPath}/project-management/backlog/${ticket.id}.md`,
+      path: `${projectPath}/.m2k/backlog/${ticket.id}.md`,
       content: generateTicketMarkdown(ticket, epic.id),
       type: 'ticket',
     }));
