@@ -1,0 +1,142 @@
+import { useState, useEffect, useCallback } from "react";
+import { useAppStore } from "../lib/store";
+
+interface ConfirmationDialogProps {
+  epicId: string;
+  epicTitle: string;
+  ticketCount: number;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function ConfirmationDialog({
+  epicId,
+  epicTitle,
+  ticketCount,
+  onConfirm,
+  onCancel,
+}: ConfirmationDialogProps) {
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onCancel]);
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in"
+      onClick={onCancel}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="dialog-title"
+    >
+      <div
+        className="bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2
+          id="dialog-title"
+          className="text-lg font-semibold text-[var(--geist-foreground)] mb-4"
+        >
+          Start Epic?
+        </h2>
+
+        <div className="space-y-3 mb-6">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-[var(--geist-accents-5)]">Epic:</span>
+            <span className="text-sm font-medium text-[var(--geist-foreground)]">
+              {epicId}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-[var(--geist-accents-5)]">Title:</span>
+            <span className="text-sm text-[var(--geist-foreground)]">
+              {epicTitle}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-[var(--geist-accents-5)]">Tickets:</span>
+            <span className="text-sm text-[var(--geist-foreground)]">
+              {ticketCount} ticket{ticketCount !== 1 ? "s" : ""}
+            </span>
+          </div>
+        </div>
+
+        <p className="text-sm text-[var(--geist-accents-5)] mb-6">
+          This will start Claude Code to work on all tickets in this epic sequentially.
+        </p>
+
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 text-sm border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 text-sm bg-[var(--geist-success)] text-white rounded-full hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]"
+          >
+            Start Epic
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function StartEpicButton() {
+  const selectedEpic = useAppStore((s) => s.selectedEpic);
+  const epics = useAppStore((s) => s.epics);
+  const tickets = useAppStore((s) => s.tickets);
+  const [showDialog, setShowDialog] = useState(false);
+
+  const epic = epics.find((e) => e.id === selectedEpic);
+  const epicTickets = tickets.filter((t) => t.epic === selectedEpic);
+  const hasInProgressTickets = epicTickets.some((t) => t.status === "in_progress");
+
+  const handleStartClick = useCallback(() => {
+    setShowDialog(true);
+  }, []);
+
+  const handleConfirm = useCallback(() => {
+    setShowDialog(false);
+    // TODO: T-053 will implement actual Claude Code CLI execution
+    console.log("Starting epic:", selectedEpic);
+  }, [selectedEpic]);
+
+  const handleCancel = useCallback(() => {
+    setShowDialog(false);
+  }, []);
+
+  if (!selectedEpic || !epic) {
+    return null;
+  }
+
+  return (
+    <>
+      <button
+        onClick={handleStartClick}
+        disabled={hasInProgressTickets}
+        className="px-3 py-1 text-xs md:text-sm bg-[var(--geist-success)] text-white rounded-full hover:opacity-90 transition-opacity whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50 disabled:cursor-not-allowed"
+        aria-label={`Start epic ${selectedEpic}`}
+        title={hasInProgressTickets ? "Epic has tickets in progress" : `Start ${selectedEpic}`}
+      >
+        Start
+      </button>
+
+      {showDialog && (
+        <ConfirmationDialog
+          epicId={epic.id}
+          epicTitle={epic.title}
+          ticketCount={epicTickets.length}
+          onConfirm={handleConfirm}
+          onCancel={handleCancel}
+        />
+      )}
+    </>
+  );
+}

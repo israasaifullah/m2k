@@ -2,6 +2,7 @@ import "./App.css";
 import { useEffect } from "react";
 import { KanbanBoard } from "./components/KanbanBoard";
 import { EpicFilter } from "./components/EpicFilter";
+import { StartEpicButton } from "./components/StartEpicButton";
 import { PRDMode } from "./components/PRDMode";
 import { SmartMode } from "./components/SmartMode";
 import { SettingsPage } from "./components/SettingsPage";
@@ -88,7 +89,12 @@ function App() {
       <header className="px-3 md:px-4 py-2 md:py-3 border-b border-[var(--geist-accents-2)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2" role="banner">
         <h1 className="text-lg font-semibold">M2K</h1>
         <nav className="flex items-center gap-2 md:gap-4 flex-wrap" aria-label="Main controls">
-          {viewMode === "kanban" && <EpicFilter />}
+          {viewMode === "kanban" && (
+            <>
+              <EpicFilter />
+              <StartEpicButton />
+            </>
+          )}
           <button
             onClick={handleSmartMode}
             className="px-2 md:px-3 py-1 md:py-1.5 text-xs md:text-sm bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-md hover:opacity-90 transition-opacity whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]"
