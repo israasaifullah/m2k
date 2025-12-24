@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Play, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { useAppStore } from "../lib/store";
 import { buildEpicPrompt } from "../lib/promptBuilder";
@@ -78,13 +79,20 @@ function ConfirmationDialog({
           <div className="flex items-center gap-2">
             <span className="text-sm text-[var(--geist-accents-5)]">Claude CLI:</span>
             {cliInstalled === null ? (
-              <span className="text-sm text-[var(--geist-accents-4)]">Checking...</span>
+              <span className="text-sm text-[var(--geist-accents-4)] flex items-center gap-1">
+                <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+                Checking...
+              </span>
             ) : cliInstalled ? (
-              <span className="text-sm text-[var(--geist-success)]">
+              <span className="text-sm text-[var(--geist-success)] flex items-center gap-1">
+                <CheckCircle size={14} aria-hidden="true" />
                 Installed {cliVersion && `(${cliVersion})`}
               </span>
             ) : (
-              <span className="text-sm text-[var(--geist-error)]">Not installed</span>
+              <span className="text-sm text-[var(--geist-error)] flex items-center gap-1">
+                <XCircle size={14} aria-hidden="true" />
+                Not installed
+              </span>
             )}
           </div>
         </div>
@@ -236,10 +244,11 @@ export function StartEpicButton() {
       <button
         onClick={handleStartClick}
         disabled={hasInProgressTickets || isExecutionRunning}
-        className="px-3 py-1 text-xs md:text-sm bg-[var(--geist-success)] text-white rounded-full hover:opacity-90 transition-opacity whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50 disabled:cursor-not-allowed"
+        className="px-3 py-1 text-xs md:text-sm bg-[var(--geist-success)] text-white rounded-full hover:opacity-90 transition-opacity whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
         aria-label={`Start epic ${selectedEpic}`}
         title={isExecutionRunning ? "Execution in progress" : hasInProgressTickets ? "Epic has tickets in progress" : `Start ${selectedEpic}`}
       >
+        <Play size={14} aria-hidden="true" />
         Start
       </button>
 

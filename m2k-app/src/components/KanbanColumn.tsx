@@ -1,5 +1,12 @@
+import { Inbox, Loader2, CheckCircle2 } from "lucide-react";
 import type { Ticket } from "../types";
 import { TicketCard } from "./TicketCard";
+
+const columnIcons: Record<string, React.ReactNode> = {
+  Backlog: <Inbox size={16} aria-hidden="true" />,
+  "In Progress": <Loader2 size={16} className="text-[var(--geist-success)]" aria-hidden="true" />,
+  Done: <CheckCircle2 size={16} className="text-emerald-500" aria-hidden="true" />,
+};
 
 interface Props {
   title: string;
@@ -13,7 +20,10 @@ export function KanbanColumn({ title, tickets }: Props) {
       aria-label={`${title} column with ${tickets.length} tickets`}
     >
       <header className="px-3 md:px-4 py-2 md:py-3 border-b border-[var(--geist-accents-2)] flex items-center justify-between shrink-0">
-        <h2 className="font-medium text-sm md:text-base">{title}</h2>
+        <div className="flex items-center gap-2">
+          {columnIcons[title]}
+          <h2 className="font-medium text-sm md:text-base">{title}</h2>
+        </div>
         <span
           className="text-xs px-2 py-0.5 rounded-full bg-[var(--geist-accents-2)] text-[var(--geist-accents-6)]"
           aria-label={`${tickets.length} tickets`}

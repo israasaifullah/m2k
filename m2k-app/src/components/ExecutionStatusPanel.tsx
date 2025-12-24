@@ -1,4 +1,5 @@
 import { useEffect, useRef, useMemo } from "react";
+import { Loader2, CheckCircle2, XCircle, X, StopCircle, Clock, Terminal, GitCommit } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { useAppStore } from "../lib/store";
@@ -92,13 +93,13 @@ export function ExecutionStatusPanel() {
       <div className="px-4 py-3 border-b border-[var(--geist-accents-2)] flex items-center justify-between">
         <div className="flex items-center gap-2">
           {executionState.status === "running" && (
-            <span className="w-2 h-2 bg-[var(--geist-success)] rounded-full animate-pulse" />
+            <Loader2 size={16} className="text-[var(--geist-success)] animate-spin" aria-hidden="true" />
           )}
           {executionState.status === "error" && (
-            <span className="w-2 h-2 bg-[var(--geist-error)] rounded-full" />
+            <XCircle size={16} className="text-[var(--geist-error)]" aria-hidden="true" />
           )}
           {executionState.status === "completed" && (
-            <span className="w-2 h-2 bg-[var(--geist-success)] rounded-full" />
+            <CheckCircle2 size={16} className="text-[var(--geist-success)]" aria-hidden="true" />
           )}
           <span className="text-sm font-medium text-[var(--geist-foreground)]">
             {executionState.status === "running" && "Executing Epic"}
@@ -110,17 +111,19 @@ export function ExecutionStatusPanel() {
           {executionState.status === "running" && (
             <button
               onClick={handleCancel}
-              className="px-2 py-1 text-xs text-[var(--geist-error)] hover:bg-[var(--geist-error-light)] rounded transition-colors"
+              className="px-2 py-1 text-xs text-[var(--geist-error)] hover:bg-[var(--geist-error-light)] rounded transition-colors flex items-center gap-1"
             >
+              <StopCircle size={12} aria-hidden="true" />
               Cancel
             </button>
           )}
           {executionState.status !== "running" && (
             <button
               onClick={handleClose}
-              className="px-2 py-1 text-xs text-[var(--geist-accents-5)] hover:text-[var(--geist-foreground)] transition-colors"
+              className="p-1 text-[var(--geist-accents-5)] hover:text-[var(--geist-foreground)] transition-colors"
+              aria-label="Close"
             >
-              Close
+              <X size={16} aria-hidden="true" />
             </button>
           )}
         </div>
@@ -163,7 +166,8 @@ export function ExecutionStatusPanel() {
         </div>
 
         {/* Elapsed time */}
-        <div className="text-xs text-[var(--geist-accents-5)]">
+        <div className="text-xs text-[var(--geist-accents-5)] flex items-center gap-1.5">
+          <Clock size={12} aria-hidden="true" />
           Elapsed: {elapsedMinutes}m {elapsedSeconds}s
         </div>
 
@@ -177,15 +181,22 @@ export function ExecutionStatusPanel() {
         {/* Completion summary */}
         {executionState.status === "completed" && (
           <div className="p-3 bg-[var(--geist-success-light)] border border-[var(--geist-success)] rounded text-sm">
-            <div className="font-medium text-[var(--geist-success-dark)] mb-2">
+            <div className="font-medium text-[var(--geist-success-dark)] mb-2 flex items-center gap-2">
+              <CheckCircle2 size={16} aria-hidden="true" />
               Epic Completed!
             </div>
             <div className="text-xs text-[var(--geist-success-dark)] space-y-1">
               <div>Tickets: {executionState.completedTickets.length}/{executionState.totalTickets}</div>
               {parsedSummary.commits.length > 0 && (
-                <div>Commits: {parsedSummary.commits.length}</div>
+                <div className="flex items-center gap-1">
+                  <GitCommit size={12} aria-hidden="true" />
+                  Commits: {parsedSummary.commits.length}
+                </div>
               )}
-              <div>Duration: {elapsedMinutes}m {elapsedSeconds}s</div>
+              <div className="flex items-center gap-1">
+                <Clock size={12} aria-hidden="true" />
+                Duration: {elapsedMinutes}m {elapsedSeconds}s
+              </div>
             </div>
           </div>
         )}
@@ -193,7 +204,8 @@ export function ExecutionStatusPanel() {
         {/* Output log (collapsible) */}
         {executionState.output.length > 0 && (
           <details className="group">
-            <summary className="text-xs text-[var(--geist-accents-5)] cursor-pointer hover:text-[var(--geist-foreground)]">
+            <summary className="text-xs text-[var(--geist-accents-5)] cursor-pointer hover:text-[var(--geist-foreground)] flex items-center gap-1.5">
+              <Terminal size={12} aria-hidden="true" />
               Output ({executionState.output.length} lines)
             </summary>
             <div

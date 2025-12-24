@@ -80,24 +80,27 @@ function App() {
           )}
           <button
             onClick={handleSmartMode}
-            className="px-2 md:px-3 py-1 md:py-1.5 text-xs md:text-sm bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-md hover:opacity-90 transition-opacity whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]"
+            className="px-2 md:px-3 py-1 md:py-1.5 text-xs md:text-sm bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-md hover:opacity-90 transition-opacity whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] flex items-center gap-1.5"
             aria-label="Open Smart Mode for AI-powered epic generation"
           >
+            <Sparkles size={14} aria-hidden="true" />
             Smart
           </button>
           <button
             onClick={handleCreateNew}
-            className="px-2 md:px-3 py-1 md:py-1.5 text-xs md:text-sm bg-[var(--geist-success)] text-white rounded-md hover:opacity-90 transition-opacity whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]"
+            className="px-2 md:px-3 py-1 md:py-1.5 text-xs md:text-sm bg-[var(--geist-success)] text-white rounded-md hover:opacity-90 transition-opacity whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] flex items-center gap-1"
             aria-label="Create new epic or ticket"
           >
-            + New
+            <Plus size={14} aria-hidden="true" />
+            New
           </button>
           <button
             onClick={selectFolder}
-            className="px-2 md:px-3 py-1 md:py-1.5 text-xs md:text-sm border border-[var(--geist-accents-3)] rounded-md hover:bg-[var(--geist-accents-1)] transition-colors whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]"
+            className="px-2 md:px-3 py-1 md:py-1.5 text-xs md:text-sm border border-[var(--geist-accents-3)] rounded-md hover:bg-[var(--geist-accents-1)] transition-colors whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] flex items-center gap-1.5"
             aria-label="Change project folder"
           >
-            Change Folder
+            <FolderOpen size={14} aria-hidden="true" />
+            Folder
           </button>
           <button
             onClick={handleSettings}
@@ -105,7 +108,7 @@ function App() {
             aria-label="Open settings (Cmd+,)"
             title="Settings (Cmd+,)"
           >
-            <SettingsIcon />
+            <Settings size={14} aria-hidden="true" />
           </button>
         </nav>
       </header>

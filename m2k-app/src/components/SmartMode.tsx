@@ -1,3 +1,4 @@
+import { Lightbulb, AlertTriangle, Check, FileText, Ticket } from "lucide-react";
 import { useAppStore, type GeneratedEpic, type GeneratedTicket } from "../lib/store";
 import { Toast, useToast } from "./Toast";
 import { MarkdownEditor } from "./MarkdownEditor";
@@ -8,24 +9,24 @@ function BestPracticeTips() {
   return (
     <div className="bg-[var(--geist-accents-1)] border border-[var(--geist-accents-2)] rounded-lg p-4">
       <h3 className="text-sm font-medium text-[var(--geist-foreground)] mb-3 flex items-center gap-2">
-        <span className="text-[var(--geist-warning)]">*</span>
+        <Lightbulb size={16} className="text-[var(--geist-warning)]" aria-hidden="true" />
         Best Practices
       </h3>
       <ul className="space-y-2 text-sm text-[var(--geist-accents-6)]">
         <li className="flex items-start gap-2">
-          <span className="text-[var(--geist-success)] mt-0.5">-</span>
+          <Check size={14} className="text-[var(--geist-success)] mt-0.5 shrink-0" aria-hidden="true" />
           <span>Keep epics focused: <strong className="text-[var(--geist-foreground)]">3-8 tickets</strong> per epic</span>
         </li>
         <li className="flex items-start gap-2">
-          <span className="text-[var(--geist-success)] mt-0.5">-</span>
+          <Check size={14} className="text-[var(--geist-success)] mt-0.5 shrink-0" aria-hidden="true" />
           <span>Break large features into <strong className="text-[var(--geist-foreground)]">multiple phases</strong></span>
         </li>
         <li className="flex items-start gap-2">
-          <span className="text-[var(--geist-success)] mt-0.5">-</span>
+          <Check size={14} className="text-[var(--geist-success)] mt-0.5 shrink-0" aria-hidden="true" />
           <span>Large epics can cause <strong className="text-[var(--geist-foreground)]">context window issues</strong> in AI assistants</span>
         </li>
         <li className="flex items-start gap-2">
-          <span className="text-[var(--geist-success)] mt-0.5">-</span>
+          <Check size={14} className="text-[var(--geist-success)] mt-0.5 shrink-0" aria-hidden="true" />
           <span>Each ticket should be <strong className="text-[var(--geist-foreground)]">completable in one session</strong></span>
         </li>
       </ul>
@@ -60,7 +61,7 @@ function ScopeWarning({ requirements }: { requirements: string }) {
   return (
     <div className="bg-[var(--geist-warning-light)] border border-[var(--geist-warning)] rounded-lg p-4">
       <h3 className="text-sm font-medium text-[var(--geist-warning-dark)] mb-2 flex items-center gap-2">
-        <span>!</span>
+        <AlertTriangle size={16} aria-hidden="true" />
         Scope Warning
       </h3>
       <p className="text-sm text-[var(--geist-warning-dark)]">
@@ -197,16 +198,18 @@ function PreviewMode({
             <button
               key={file.name}
               onClick={() => setSelectedIndex(index)}
-              className={`w-full px-3 py-2 text-left text-sm truncate transition-colors ${
+              className={`w-full px-3 py-2 text-left text-sm truncate transition-colors flex items-center gap-2 ${
                 index === selectedIndex
                   ? 'bg-[var(--geist-accents-2)] text-[var(--geist-foreground)]'
                   : 'hover:bg-[var(--geist-accents-1)] text-[var(--geist-accents-5)]'
               }`}
             >
-              <span className={`inline-block w-2 h-2 rounded-full mr-2 ${
-                file.type === 'epic' ? 'bg-purple-500' : 'bg-blue-500'
-              }`} />
-              {file.name}
+              {file.type === 'epic' ? (
+                <FileText size={14} className="text-purple-500 shrink-0" aria-hidden="true" />
+              ) : (
+                <Ticket size={14} className="text-blue-500 shrink-0" aria-hidden="true" />
+              )}
+              <span className="truncate">{file.name}</span>
             </button>
           ))}
         </div>

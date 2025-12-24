@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { CheckCircle, XCircle } from "lucide-react";
 
 type ToastType = "success" | "error";
 
@@ -26,12 +27,17 @@ export function Toast({ message, type, onClose, duration = 3000 }: ToastProps) {
 
   return (
     <div
-      className={`fixed bottom-4 right-4 px-4 py-2 rounded-lg text-white text-sm shadow-lg transition-opacity duration-200 ${bgColor} ${
+      className={`fixed bottom-4 right-4 px-4 py-2 rounded-lg text-white text-sm shadow-lg transition-opacity duration-200 flex items-center gap-2 ${bgColor} ${
         visible ? "opacity-100" : "opacity-0"
       }`}
       role="alert"
       aria-live="polite"
     >
+      {type === "success" ? (
+        <CheckCircle size={16} aria-hidden="true" />
+      ) : (
+        <XCircle size={16} aria-hidden="true" />
+      )}
       {message}
     </div>
   );

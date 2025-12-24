@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Pencil, ChevronDown, ChevronRight } from "lucide-react";
 import type { Ticket } from "../types";
 import { useAppStore } from "../lib/store";
 import { invoke } from "@tauri-apps/api/core";
@@ -91,9 +92,10 @@ export function TicketCard({ ticket }: Props) {
         </span>
         <button
           onClick={handleEdit}
-          className="ml-auto text-xs text-[var(--geist-accents-5)] hover:text-[var(--geist-foreground)] transition-colors px-1.5 py-0.5 rounded hover:bg-[var(--geist-accents-2)] focus:outline-none focus:ring-1 focus:ring-[var(--geist-success)]"
+          className="ml-auto text-xs text-[var(--geist-accents-5)] hover:text-[var(--geist-foreground)] transition-colors px-1.5 py-0.5 rounded hover:bg-[var(--geist-accents-2)] focus:outline-none focus:ring-1 focus:ring-[var(--geist-success)] flex items-center gap-1"
           aria-label={`Edit ${ticket.id}`}
         >
+          <Pencil size={12} aria-hidden="true" />
           Edit
         </button>
         {isInProgress && (
@@ -102,7 +104,14 @@ export function TicketCard({ ticket }: Props) {
           </span>
         )}
       </div>
-      <h3 className="font-medium mt-2 text-sm">{ticket.title}</h3>
+      <div className="flex items-center gap-1.5 mt-2">
+        {expanded ? (
+          <ChevronDown size={14} className="text-[var(--geist-accents-5)]" aria-hidden="true" />
+        ) : (
+          <ChevronRight size={14} className="text-[var(--geist-accents-5)]" aria-hidden="true" />
+        )}
+        <h3 className="font-medium text-sm">{ticket.title}</h3>
+      </div>
       {expanded && ticket.description && (
         <p className="text-xs text-[var(--geist-accents-5)] mt-2 animate-slide-up">
           {ticket.description}
