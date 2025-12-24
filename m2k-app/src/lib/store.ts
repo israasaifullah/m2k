@@ -59,6 +59,7 @@ interface AppState {
   prdState: PrdState;
   smartModeState: SmartModeState;
   executionState: ExecutionState;
+  vimMode: boolean;
   setTickets: (tickets: Ticket[]) => void;
   setEpics: (epics: Epic[]) => void;
   setSelectedEpic: (epicId: string | null) => void;
@@ -72,6 +73,7 @@ interface AppState {
   setExecutionState: (state: Partial<ExecutionState>) => void;
   resetExecutionState: () => void;
   addExecutionOutput: (line: string) => void;
+  setVimMode: (enabled: boolean) => void;
 }
 
 const defaultPrdState: PrdState = {
@@ -108,6 +110,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   prdState: { ...defaultPrdState },
   smartModeState: { ...defaultSmartModeState },
   executionState: { ...defaultExecutionState },
+  vimMode: false,
   setTickets: (tickets) => set({ tickets }),
   setEpics: (epics) => set({ epics }),
   setSelectedEpic: (epicId) => set({ selectedEpic: epicId }),
@@ -130,4 +133,5 @@ export const useAppStore = create<AppState>((set, get) => ({
       output: [...s.executionState.output.slice(-500), line], // Keep last 500 lines
     },
   })),
+  setVimMode: (enabled) => set({ vimMode: enabled }),
 }));

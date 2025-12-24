@@ -6,6 +6,27 @@ import { Toast, useToast } from "./Toast";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
+function VimToggle() {
+  const vimMode = useAppStore((s) => s.vimMode);
+  const setVimMode = useAppStore((s) => s.setVimMode);
+
+  return (
+    <button
+      onClick={() => setVimMode(!vimMode)}
+      className={`px-2 py-1 text-xs rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] ${
+        vimMode
+          ? "bg-[var(--geist-success)] text-white"
+          : "border border-[var(--geist-accents-3)] text-[var(--geist-accents-5)] hover:bg-[var(--geist-accents-1)]"
+      }`}
+      aria-pressed={vimMode}
+      aria-label="Toggle vim mode"
+      title={vimMode ? "Vim mode enabled" : "Enable vim mode"}
+    >
+      VIM
+    </button>
+  );
+}
+
 interface DocTypeSelectorProps {
   value: PrdDocType;
   onChange: (type: PrdDocType) => void;
@@ -18,7 +39,7 @@ function DocTypeSelector({ value, onChange, disabled }: DocTypeSelectorProps) {
       <button
         onClick={() => onChange("epic")}
         disabled={disabled}
-        className={`px-3 py-1.5 text-sm rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50 disabled:cursor-not-allowed ${
+        className={`px-3 py-1.5 text-sm rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50 disabled:cursor-not-allowed ${
           value === "epic"
             ? "bg-[var(--geist-foreground)] text-[var(--geist-background)]"
             : "border border-[var(--geist-accents-3)] hover:bg-[var(--geist-accents-1)]"
@@ -31,7 +52,7 @@ function DocTypeSelector({ value, onChange, disabled }: DocTypeSelectorProps) {
       <button
         onClick={() => onChange("ticket")}
         disabled={disabled}
-        className={`px-3 py-1.5 text-sm rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50 disabled:cursor-not-allowed ${
+        className={`px-3 py-1.5 text-sm rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50 disabled:cursor-not-allowed ${
           value === "ticket"
             ? "bg-[var(--geist-foreground)] text-[var(--geist-background)]"
             : "border border-[var(--geist-accents-3)] hover:bg-[var(--geist-accents-1)]"
@@ -57,7 +78,7 @@ function EpicSelector({ value, onChange }: EpicSelectorProps) {
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="px-2 py-1 text-sm bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]"
+      className="px-3 py-1 text-sm bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-full focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]"
       aria-label="Select epic"
     >
       <option value="">Select Epic</option>
@@ -197,6 +218,7 @@ export function PRDMode() {
           <span className="text-sm text-[var(--geist-accents-5)]">
             {isEditing ? "Editing" : "New"} {prdState.docType}
           </span>
+          <VimToggle />
         </div>
         <div className="flex items-center gap-2">
           {error && (
@@ -205,14 +227,14 @@ export function PRDMode() {
           <button
             onClick={handleCancel}
             disabled={saving}
-            className="px-3 py-1.5 text-sm border border-[var(--geist-accents-3)] rounded-md hover:bg-[var(--geist-accents-1)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50"
+            className="px-3 py-1.5 text-sm border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-3 py-1.5 text-sm bg-[var(--geist-success)] text-white rounded-md hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50"
+            className="px-3 py-1.5 text-sm bg-[var(--geist-success)] text-white rounded-full hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50"
           >
             {saving ? "Saving..." : "Save"}
           </button>
