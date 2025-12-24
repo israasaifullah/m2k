@@ -3,6 +3,7 @@ import { KanbanBoard } from "./components/KanbanBoard";
 import { EpicFilter } from "./components/EpicFilter";
 import { PRDMode } from "./components/PRDMode";
 import { SmartMode } from "./components/SmartMode";
+import { SettingsPage } from "./components/SettingsPage";
 import { useAppStore } from "./lib/store";
 import { useProjectLoader } from "./hooks/useProjectLoader";
 
@@ -22,6 +23,10 @@ function App() {
   const handleSmartMode = () => {
     resetSmartModeState();
     setViewMode("smart");
+  };
+
+  const handleSettings = () => {
+    setViewMode("settings");
   };
 
   if (!projectPath) {
@@ -73,12 +78,20 @@ function App() {
           >
             Change Folder
           </button>
+          <button
+            onClick={handleSettings}
+            className="px-2 md:px-3 py-1 md:py-1.5 text-xs md:text-sm border border-[var(--geist-accents-3)] rounded-md hover:bg-[var(--geist-accents-1)] transition-colors whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]"
+            aria-label="Open settings"
+          >
+            Settings
+          </button>
         </nav>
       </header>
-      <div className="flex-1 min-h-0" role="region" aria-label={viewMode === "kanban" ? "Kanban board" : viewMode === "prd" ? "PRD editor" : "Smart Mode"}>
+      <div className="flex-1 min-h-0" role="region" aria-label={viewMode === "kanban" ? "Kanban board" : viewMode === "prd" ? "PRD editor" : viewMode === "smart" ? "Smart Mode" : "Settings"}>
         {viewMode === "kanban" && <KanbanBoard />}
         {viewMode === "prd" && <PRDMode />}
         {viewMode === "smart" && <SmartMode />}
+        {viewMode === "settings" && <SettingsPage />}
       </div>
     </main>
   );

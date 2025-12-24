@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { Ticket, Epic } from "../types";
 
-export type ViewMode = "kanban" | "prd" | "smart";
+export type ViewMode = "kanban" | "prd" | "smart" | "settings";
 export type PrdDocType = "epic" | "ticket";
 
 interface PrdState {
