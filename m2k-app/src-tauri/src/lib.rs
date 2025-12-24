@@ -12,7 +12,7 @@ use keyring::Entry;
 use parser::{Epic, Ticket};
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tauri::AppHandle;
@@ -539,6 +539,73 @@ fn init_m2k_folder(project_path: String) -> Result<String, String> {
     Ok(m2k_path.to_string_lossy().to_string())
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct FileNode {
+    name: String,
+    path: String,
+    is_directory: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    children: Option<Vec<FileNode>>,
+}
+
+fn build_tree(path: &Path) -> Result<FileNode, String> {
+    let metadata = fs::metadata(path)
+        .map_err(|e| format!("Failed to read metadata: {}", e))?;
+
+    let name = path.file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("")
+        .to_string();
+
+    let path_str = path.to_string_lossy().to_string();
+
+    if metadata.is_dir() {
+        let mut children = Vec::new();
+
+        if let Ok(entries) = fs::read_dir(path) {
+            for entry in entries.flatten() {
+                if let Ok(child) = build_tree(&entry.path()) {
+                    children.push(child);
+                }
+            }
+        }
+
+        // Sort: directories first, then files, both alphabetically
+        children.sort_by(|a, b| {
+            match (a.is_directory, b.is_directory) {
+                (true, false) => std::cmp::Ordering::Less,
+                (false, true) => std::cmp::Ordering::Greater,
+                _ => a.name.cmp(&b.name),
+            }
+        });
+
+        Ok(FileNode {
+            name,
+            path: path_str,
+            is_directory: true,
+            children: Some(children),
+        })
+    } else {
+        Ok(FileNode {
+            name,
+            path: path_str,
+            is_directory: false,
+            children: None,
+        })
+    }
+}
+
+#[tauri::command]
+fn read_directory_tree(path: String) -> Result<FileNode, String> {
+    let path = Path::new(&path);
+
+    if !path.exists() {
+        return Err("Path does not exist".to_string());
+    }
+
+    build_tree(path)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -591,7 +658,8 @@ pub fn run() {
             get_app_state_value,
             project_path_exists,
             path_exists,
-            init_m2k_folder
+            init_m2k_folder,
+            read_directory_tree
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

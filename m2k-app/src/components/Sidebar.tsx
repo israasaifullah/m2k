@@ -1,4 +1,4 @@
-import { Settings, FolderOpen, Plus, Sparkles, LayoutGrid, ChevronDown, ChevronRight, Folder, AlertTriangle } from "lucide-react";
+import { Settings, FolderOpen, Plus, Sparkles, LayoutGrid, ChevronDown, ChevronRight, Folder, AlertTriangle, Files } from "lucide-react";
 import { useAppStore, RegisteredProject } from "../lib/store";
 import { useProjectLoader } from "../hooks/useProjectLoader";
 import { StartEpicButton } from "./StartEpicButton";
@@ -68,6 +68,10 @@ export function Sidebar() {
     setViewMode("settings");
   };
 
+  const handleResources = () => {
+    setViewMode("resources");
+  };
+
   const handleProjectClick = async (project: RegisteredProject) => {
     const result = await switchToProject(project);
     if (result.success) {
@@ -128,6 +132,18 @@ export function Sidebar() {
             <LayoutGrid size={18} />
           </button>
           <button
+            onClick={handleResources}
+            className={`p-2 rounded-md transition-colors ${
+              viewMode === "resources"
+                ? "bg-[var(--geist-accents-2)]"
+                : "hover:bg-[var(--geist-accents-1)] text-[var(--geist-accents-5)]"
+            }`}
+            aria-label="Resources"
+            title="Resources"
+          >
+            <Files size={18} />
+          </button>
+          <button
             onClick={handleSmartMode}
             className={`p-2 rounded-md transition-colors ${
               viewMode === "smart"
@@ -146,8 +162,8 @@ export function Sidebar() {
                 ? "bg-[var(--geist-success)] text-white"
                 : "hover:bg-[var(--geist-accents-1)] text-[var(--geist-accents-5)]"
             }`}
-            aria-label="Create new"
-            title="New"
+            aria-label="PRD Mode"
+            title="PRD Mode"
           >
             <Plus size={18} />
           </button>
@@ -209,6 +225,19 @@ export function Sidebar() {
         </button>
 
         <button
+          onClick={handleResources}
+          className={`w-full px-3 py-2 text-sm rounded-md flex items-center gap-2 transition-colors ${
+            viewMode === "resources"
+              ? "bg-[var(--geist-accents-2)] text-[var(--geist-foreground)]"
+              : "hover:bg-[var(--geist-accents-1)] text-[var(--geist-accents-5)]"
+          }`}
+          aria-label="Resources"
+        >
+          <Files size={16} />
+          Resources
+        </button>
+
+        <button
           onClick={handleSmartMode}
           className={`w-full px-3 py-2 text-sm rounded-md flex items-center gap-2 transition-colors ${
             viewMode === "smart"
@@ -233,13 +262,6 @@ export function Sidebar() {
           <Plus size={16} />
           New
         </button>
-
-        {/* Kanban-specific controls */}
-        {viewMode === "kanban" && (
-          <div className="pt-3 mt-3 border-t border-[var(--geist-accents-2)] space-y-2">
-            <StartEpicButton />
-          </div>
-        )}
       </nav>
 
       {/* Projects Section */}

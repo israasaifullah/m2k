@@ -162,7 +162,7 @@ export function Terminal() {
   const toggleCollapse = () => setIsCollapsed((prev) => !prev);
 
   return (
-    <div className={`flex flex-col bg-[#0a0a0a] transition-all duration-200 ${isCollapsed ? "h-8" : "h-[250px]"}`}>
+    <div className={`flex flex-col bg-[#0a0a0a] transition-all duration-200 ${isCollapsed ? "h-8" : "h-[500px]"}`}>
       <div
         className="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--geist-accents-2)] bg-[var(--geist-background)] cursor-pointer select-none hover:bg-[var(--geist-accents-1)]"
         onClick={toggleCollapse}

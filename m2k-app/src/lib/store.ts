@@ -9,7 +9,7 @@ export interface RegisteredProject {
   last_accessed: string;
 }
 
-export type ViewMode = "kanban" | "prd" | "smart" | "settings";
+export type ViewMode = "kanban" | "prd" | "smart" | "settings" | "resources";
 export type PrdDocType = "epic" | "ticket";
 
 interface PrdState {

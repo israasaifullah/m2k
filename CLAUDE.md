@@ -12,17 +12,19 @@
 
 - Clear the context after every epic work.
 
+#### IGNORE FOR NOW ####
 - If user start an execution with a full EPIC, after every completed execution of epic, create a new branch and make a commit
-
 - Features Branch: `feature/{epic_tag}/{description}`
 - Bugfixes Branch: `bugfix/{epic_tag}/{description}`
+#### END IGNORE FOR NOW ####
 
 ## If user ask to run a single TICKET
-- If user start an execution with a ticket, after every completed execution of ticket, create a new branch and make a commit
 
+#### IGNORE FOR NOW ####
+- If user start an execution with a ticket, after every completed execution of ticket, create a new branch and make a commit
 - Features Branch: `feature/{ticket_tag}/{description}`
 - Bugfixes Branch: `bugfix/{ticket_tag}/{description}`
-
+#### END IGNORE FOR NOW ####
 
 ### Commit Convention
 Include ticket reference in commit messages:
