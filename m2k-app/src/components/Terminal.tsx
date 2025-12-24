@@ -12,7 +12,7 @@ export function Terminal() {
   const fitAddonRef = useRef<FitAddon | null>(null);
   const ptyIdRef = useRef<number | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const projectPath = useAppStore((s) => s.projectPath);
 
   useEffect(() => {
