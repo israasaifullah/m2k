@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { useAppStore } from "../lib/store";
 import { Toast, useToast } from "./Toast";
 
@@ -7,12 +8,22 @@ export function SettingsPage() {
   const [apiKey, setApiKey] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [hasExistingKey, setHasExistingKey] = useState(false);
   const { toast, showToast, hideToast } = useToast();
 
   useEffect(() => {
-    // Check if key exists (will be implemented in T-071)
-    // For now, just show placeholder UI
+    const checkExistingKey = async () => {
+      try {
+        const exists = await invoke<boolean>("has_api_key");
+        setHasExistingKey(exists);
+      } catch (err) {
+        console.error("Failed to check API key:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    checkExistingKey();
   }, []);
 
   const handleCancel = () => {
@@ -27,8 +38,7 @@ export function SettingsPage() {
 
     setSaving(true);
     try {
-      // Will be implemented in T-071 (Tauri keyring)
-      // For now, just show success
+      await invoke("save_api_key", { apiKey: apiKey.trim() });
       showToast("API key saved successfully!", "success");
       setHasExistingKey(true);
       setApiKey("");
@@ -44,7 +54,7 @@ export function SettingsPage() {
   const handleClear = async () => {
     setSaving(true);
     try {
-      // Will be implemented in T-071 (Tauri keyring)
+      await invoke("delete_api_key");
       setHasExistingKey(false);
       setApiKey("");
       showToast("API key cleared", "success");
@@ -57,6 +67,14 @@ export function SettingsPage() {
   };
 
   const maskedKey = apiKey ? "sk-ant-" + "*".repeat(Math.max(0, apiKey.length - 10)) + apiKey.slice(-4) : "";
+
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <span className="text-sm text-[var(--geist-accents-5)]">Loading...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col animate-fade-in">

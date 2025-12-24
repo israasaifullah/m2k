@@ -1,9 +1,12 @@
+use keyring::Entry;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::env;
 
 const CLAUDE_API_URL: &str = "https://api.anthropic.com/v1/messages";
 const CLAUDE_MODEL: &str = "claude-sonnet-4-20250514";
+const KEYRING_SERVICE: &str = "m2k-app";
+const KEYRING_USER: &str = "anthropic-api-key";
 
 #[derive(Debug, Serialize)]
 struct ClaudeMessage {
@@ -61,9 +64,16 @@ pub struct GeneratedEpic {
 }
 
 fn get_api_key() -> Result<String, String> {
+    // Try keyring first
+    if let Ok(entry) = Entry::new(KEYRING_SERVICE, KEYRING_USER) {
+        if let Ok(key) = entry.get_password() {
+            return Ok(key);
+        }
+    }
+    // Fall back to environment variables
     env::var("ANTHROPIC_API_KEY")
         .or_else(|_| env::var("CLAUDE_API_KEY"))
-        .map_err(|_| "ANTHROPIC_API_KEY not set. Please set it in your environment.".to_string())
+        .map_err(|_| "No API key configured. Please add your Anthropic API key in Settings.".to_string())
 }
 
 pub async fn generate_epic_and_tickets(

@@ -3,11 +3,15 @@ mod parser;
 mod watcher;
 
 use claude::GeneratedEpic;
+use keyring::Entry;
 use parser::{Epic, Ticket};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 use tauri::AppHandle;
+
+const KEYRING_SERVICE: &str = "m2k-app";
+const KEYRING_USER: &str = "anthropic-api-key";
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct AppConfig {
@@ -49,6 +53,48 @@ fn save_config(config: AppConfig) -> Result<(), String> {
         .map_err(|e| format!("Failed to serialize config: {}", e))?;
 
     fs::write(&config_path, content).map_err(|e| format!("Failed to write config: {}", e))
+}
+
+#[tauri::command]
+fn save_api_key(api_key: String) -> Result<(), String> {
+    let entry = Entry::new(KEYRING_SERVICE, KEYRING_USER)
+        .map_err(|e| format!("Failed to create keyring entry: {}", e))?;
+    entry
+        .set_password(&api_key)
+        .map_err(|e| format!("Failed to save API key: {}", e))
+}
+
+#[tauri::command]
+fn load_api_key() -> Result<Option<String>, String> {
+    let entry = Entry::new(KEYRING_SERVICE, KEYRING_USER)
+        .map_err(|e| format!("Failed to create keyring entry: {}", e))?;
+    match entry.get_password() {
+        Ok(key) => Ok(Some(key)),
+        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(e) => Err(format!("Failed to load API key: {}", e)),
+    }
+}
+
+#[tauri::command]
+fn delete_api_key() -> Result<(), String> {
+    let entry = Entry::new(KEYRING_SERVICE, KEYRING_USER)
+        .map_err(|e| format!("Failed to create keyring entry: {}", e))?;
+    match entry.delete_credential() {
+        Ok(()) => Ok(()),
+        Err(keyring::Error::NoEntry) => Ok(()),
+        Err(e) => Err(format!("Failed to delete API key: {}", e)),
+    }
+}
+
+#[tauri::command]
+fn has_api_key() -> Result<bool, String> {
+    let entry = Entry::new(KEYRING_SERVICE, KEYRING_USER)
+        .map_err(|e| format!("Failed to create keyring entry: {}", e))?;
+    match entry.get_password() {
+        Ok(_) => Ok(true),
+        Err(keyring::Error::NoEntry) => Ok(false),
+        Err(e) => Err(format!("Failed to check API key: {}", e)),
+    }
 }
 
 #[tauri::command]
@@ -122,6 +168,10 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             load_config,
             save_config,
+            save_api_key,
+            load_api_key,
+            delete_api_key,
+            has_api_key,
             parse_tickets,
             parse_epics,
             start_watcher,
