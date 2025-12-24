@@ -14,6 +14,7 @@ export function useProjectLoader() {
 
   const loadProject = async (path: string) => {
     try {
+      path = `${path}/.m2k`;
       const [tickets, epics] = await Promise.all([
         invoke<Ticket[]>("parse_tickets", { path }),
         invoke<Epic[]>("parse_epics", { path }),

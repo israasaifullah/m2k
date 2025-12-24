@@ -123,7 +123,7 @@ export function PRDMode() {
         showToast("File saved successfully", "success");
       } else if (prdState.docType === "epic") {
         const nextId = await invoke<number>("get_next_epic_id", {
-          projectPath,
+          projectPath: `${projectPath}/.m2k`,
         });
         const paddedId = nextId.toString().padStart(3, "0");
         const titleMatch = prdState.content.match(/^# EPIC-[\d{}\w]+: (.+)$/m);
@@ -145,7 +145,7 @@ export function PRDMode() {
           return;
         }
         const nextId = await invoke<number>("get_next_ticket_id", {
-          projectPath,
+          projectPath: `${projectPath}/.m2k`,
         });
         const paddedId = nextId.toString().padStart(3, "0");
         const filePath = `${projectPath}/.m2k/backlog/T-${paddedId}.md`;
@@ -162,7 +162,7 @@ export function PRDMode() {
         await invoke("save_markdown_file", { path: filePath, content });
         showToast(`Ticket T-${paddedId} created`, "success");
       }
-      setTimeout(() => setViewMode("kanban"), 1000);
+      //setTimeout(() => setViewMode("kanban"), 1000);
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       setError(errMsg);
