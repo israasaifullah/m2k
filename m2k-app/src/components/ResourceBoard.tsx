@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronRight, ChevronDown, Folder, File, FileText, Image, FileCode, Search, X } from "lucide-react";
+import { ChevronRight, ChevronDown, Folder, File, FileText, Image, FileCode, Search, X, Plus, FolderPlus, Edit2, Trash2, MoreVertical, Save } from "lucide-react";
 import { useAppStore } from "../lib/store";
 import { invoke } from "@tauri-apps/api/core";
+import { MarkdownEditor } from "./MarkdownEditor";
 
 interface FileNode {
   name: string;
@@ -15,6 +16,7 @@ interface TreeItemProps {
   level: number;
   selectedPath: string | null;
   onSelect: (path: string) => void;
+  onContextMenu: (node: FileNode, event: React.MouseEvent) => void;
 }
 
 function getFileIcon(fileName: string) {
@@ -47,7 +49,7 @@ function getFileIcon(fileName: string) {
   }
 }
 
-function TreeItem({ node, level, selectedPath, onSelect }: TreeItemProps) {
+function TreeItem({ node, level, selectedPath, onSelect, onContextMenu }: TreeItemProps) {
   const [expanded, setExpanded] = useState(false);
 
   const handleToggle = () => {
@@ -64,6 +66,10 @@ function TreeItem({ node, level, selectedPath, onSelect }: TreeItemProps) {
     <div>
       <button
         onClick={handleToggle}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          onContextMenu(node, e);
+        }}
         className={`w-full px-2 py-1.5 text-sm flex items-center gap-2 hover:bg-[var(--geist-accents-1)] transition-colors ${
           isSelected ? "bg-[var(--geist-accents-2)] text-[var(--geist-foreground)]" : "text-[var(--geist-accents-5)]"
         }`}
@@ -93,6 +99,7 @@ function TreeItem({ node, level, selectedPath, onSelect }: TreeItemProps) {
               level={level + 1}
               selectedPath={selectedPath}
               onSelect={onSelect}
+              onContextMenu={onContextMenu}
             />
           ))}
         </div>
@@ -109,9 +116,15 @@ function FilePreview({ path }: FilePreviewProps) {
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [editContent, setEditContent] = useState("");
 
   useEffect(() => {
     loadFile();
+    setEditing(false);
+    setHasChanges(false);
   }, [path]);
 
   const loadFile = async () => {
@@ -120,12 +133,33 @@ function FilePreview({ path }: FilePreviewProps) {
     try {
       const fileContent = await invoke<string>("read_markdown_file", { path });
       setContent(fileContent);
+      setEditContent(fileContent);
     } catch (err) {
       setError(String(err));
       setContent(null);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      await invoke("save_markdown_file", { path, content: editContent });
+      setContent(editContent);
+      setHasChanges(false);
+      setEditing(false);
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEditorChange = (value: string) => {
+    setEditContent(value);
+    setHasChanges(value !== content);
   };
 
   const ext = path.split('.').pop()?.toLowerCase();
@@ -163,11 +197,56 @@ function FilePreview({ path }: FilePreviewProps) {
     );
   }
 
-  if (isMarkdown && content) {
+  if (isMarkdown && content !== null) {
     return (
-      <div className="h-full overflow-auto p-6">
-        <div className="prose prose-sm dark:prose-invert max-w-none">
-          <pre className="whitespace-pre-wrap text-sm">{content}</pre>
+      <div className="h-full flex flex-col">
+        <div className="flex items-center justify-between p-3 border-b border-[var(--geist-accents-2)]">
+          <h3 className="text-sm font-medium truncate">{path.split('/').pop()}</h3>
+          <div className="flex gap-2">
+            {editing ? (
+              <>
+                <button
+                  onClick={() => {
+                    setEditing(false);
+                    setEditContent(content);
+                    setHasChanges(false);
+                  }}
+                  className="px-3 py-1 text-sm border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={!hasChanges || saving}
+                  className="px-3 py-1 text-sm bg-[var(--geist-success)] text-white rounded-full hover:opacity-90 disabled:opacity-50 flex items-center gap-1"
+                >
+                  <Save size={14} />
+                  {saving ? "Saving..." : "Save"}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setEditing(true)}
+                className="px-3 py-1 text-sm border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)] flex items-center gap-1"
+              >
+                <Edit2 size={14} />
+                Edit
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="flex-1 min-h-0">
+          {editing ? (
+            <div className="h-full p-3">
+              <MarkdownEditor value={editContent} onChange={handleEditorChange} />
+            </div>
+          ) : (
+            <div className="h-full overflow-auto p-6">
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <pre className="whitespace-pre-wrap text-sm">{content}</pre>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -212,6 +291,405 @@ function filterTree(node: FileNode, searchQuery: string, fileType: string): File
   return matchesSearch && matchesType ? node : null;
 }
 
+interface ContextMenuProps {
+  node: FileNode;
+  x: number;
+  y: number;
+  onClose: () => void;
+  onRename: (node: FileNode) => void;
+  onDelete: (node: FileNode) => void;
+}
+
+function ContextMenu({ node, x, y, onClose, onRename, onDelete }: ContextMenuProps) {
+  useEffect(() => {
+    const handleClick = () => onClose();
+    const handleEscape = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("click", handleClick);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("click", handleClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg shadow-xl py-1 z-50"
+      style={{ left: x, top: y }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        onClick={() => { onRename(node); onClose(); }}
+        className="w-full px-4 py-2 text-sm text-left hover:bg-[var(--geist-accents-1)] flex items-center gap-2"
+      >
+        <Edit2 size={14} />
+        Rename
+      </button>
+      <button
+        onClick={() => { onDelete(node); onClose(); }}
+        className="w-full px-4 py-2 text-sm text-left hover:bg-[var(--geist-accents-1)] text-[var(--geist-error)] flex items-center gap-2"
+      >
+        <Trash2 size={14} />
+        Delete
+      </button>
+    </div>
+  );
+}
+
+interface NewFileDialogProps {
+  parentPath: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function NewFileDialog({ parentPath, onClose, onSuccess }: NewFileDialogProps) {
+  const [fileName, setFileName] = useState("");
+  const [template, setTemplate] = useState("blank");
+  const [error, setError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => e.key === "Escape" && !creating && onClose();
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [onClose, creating]);
+
+  const templates: Record<string, string> = {
+    blank: "",
+    markdown: "# New Document\n\n",
+    readme: "# README\n\n## Overview\n\n## Usage\n\n",
+  };
+
+  const handleCreate = async () => {
+    if (!fileName.trim()) {
+      setError("File name is required");
+      return;
+    }
+
+    setCreating(true);
+    setError(null);
+
+    try {
+      const filePath = `${parentPath}/${fileName}`;
+      const content = templates[template] || "";
+      await invoke("create_file", { path: filePath, content });
+      onSuccess();
+      onClose();
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={creating ? undefined : onClose}>
+      <div className="bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+        <h2 className="text-lg font-semibold mb-4">New File</h2>
+
+        <div className="space-y-4 mb-6">
+          <div>
+            <label className="text-sm text-[var(--geist-accents-5)] mb-1 block">File name</label>
+            <input
+              type="text"
+              value={fileName}
+              onChange={(e) => setFileName(e.target.value)}
+              placeholder="example.md"
+              className="w-full px-3 py-2 text-sm bg-[var(--geist-background)] border border-[var(--geist-accents-2)] rounded focus:outline-none focus:border-[var(--geist-accents-4)]"
+              autoFocus
+              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+            />
+          </div>
+
+          <div>
+            <label className="text-sm text-[var(--geist-accents-5)] mb-1 block">Template</label>
+            <select
+              value={template}
+              onChange={(e) => setTemplate(e.target.value)}
+              className="w-full px-3 py-2 text-sm bg-[var(--geist-background)] border border-[var(--geist-accents-2)] rounded focus:outline-none focus:border-[var(--geist-accents-4)]"
+            >
+              <option value="blank">Blank</option>
+              <option value="markdown">Markdown</option>
+              <option value="readme">README</option>
+            </select>
+          </div>
+        </div>
+
+        {error && (
+          <div className="p-3 mb-4 bg-[var(--geist-error-light)] border border-[var(--geist-error)] rounded text-sm text-[var(--geist-error)]">
+            {error}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            disabled={creating}
+            className="px-4 py-2 text-sm border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)] disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleCreate}
+            disabled={creating}
+            className="px-4 py-2 text-sm bg-[var(--geist-success)] text-white rounded-full hover:opacity-90 disabled:opacity-50"
+          >
+            {creating ? "Creating..." : "Create"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface NewFolderDialogProps {
+  parentPath: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function NewFolderDialog({ parentPath, onClose, onSuccess }: NewFolderDialogProps) {
+  const [folderName, setFolderName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => e.key === "Escape" && !creating && onClose();
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [onClose, creating]);
+
+  const handleCreate = async () => {
+    if (!folderName.trim()) {
+      setError("Folder name is required");
+      return;
+    }
+
+    setCreating(true);
+    setError(null);
+
+    try {
+      const folderPath = `${parentPath}/${folderName}`;
+      await invoke("create_folder", { path: folderPath });
+      onSuccess();
+      onClose();
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={creating ? undefined : onClose}>
+      <div className="bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+        <h2 className="text-lg font-semibold mb-4">New Folder</h2>
+
+        <div className="mb-6">
+          <label className="text-sm text-[var(--geist-accents-5)] mb-1 block">Folder name</label>
+          <input
+            type="text"
+            value={folderName}
+            onChange={(e) => setFolderName(e.target.value)}
+            placeholder="my-folder"
+            className="w-full px-3 py-2 text-sm bg-[var(--geist-background)] border border-[var(--geist-accents-2)] rounded focus:outline-none focus:border-[var(--geist-accents-4)]"
+            autoFocus
+            onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+          />
+        </div>
+
+        {error && (
+          <div className="p-3 mb-4 bg-[var(--geist-error-light)] border border-[var(--geist-error)] rounded text-sm text-[var(--geist-error)]">
+            {error}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            disabled={creating}
+            className="px-4 py-2 text-sm border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)] disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleCreate}
+            disabled={creating}
+            className="px-4 py-2 text-sm bg-[var(--geist-success)] text-white rounded-full hover:opacity-90 disabled:opacity-50"
+          >
+            {creating ? "Creating..." : "Create"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface RenameDialogProps {
+  node: FileNode;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function RenameDialog({ node, onClose, onSuccess }: RenameDialogProps) {
+  const [newName, setNewName] = useState(node.name);
+  const [error, setError] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState(false);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => e.key === "Escape" && !renaming && onClose();
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [onClose, renaming]);
+
+  const handleRename = async () => {
+    if (!newName.trim()) {
+      setError("Name is required");
+      return;
+    }
+
+    if (newName === node.name) {
+      onClose();
+      return;
+    }
+
+    setRenaming(true);
+    setError(null);
+
+    try {
+      const parentPath = node.path.substring(0, node.path.lastIndexOf('/'));
+      const newPath = `${parentPath}/${newName}`;
+      await invoke("rename_file_or_folder", { oldPath: node.path, newPath });
+      onSuccess();
+      onClose();
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setRenaming(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={renaming ? undefined : onClose}>
+      <div className="bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+        <h2 className="text-lg font-semibold mb-4">Rename {node.isDirectory ? 'Folder' : 'File'}</h2>
+
+        <div className="mb-6">
+          <label className="text-sm text-[var(--geist-accents-5)] mb-1 block">New name</label>
+          <input
+            type="text"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            className="w-full px-3 py-2 text-sm bg-[var(--geist-background)] border border-[var(--geist-accents-2)] rounded focus:outline-none focus:border-[var(--geist-accents-4)]"
+            autoFocus
+            onKeyDown={(e) => e.key === "Enter" && handleRename()}
+          />
+        </div>
+
+        {error && (
+          <div className="p-3 mb-4 bg-[var(--geist-error-light)] border border-[var(--geist-error)] rounded text-sm text-[var(--geist-error)]">
+            {error}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            disabled={renaming}
+            className="px-4 py-2 text-sm border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)] disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleRename}
+            disabled={renaming}
+            className="px-4 py-2 text-sm bg-[var(--geist-success)] text-white rounded-full hover:opacity-90 disabled:opacity-50"
+          >
+            {renaming ? "Renaming..." : "Rename"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface DeleteDialogProps {
+  node: FileNode;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function DeleteDialog({ node, onClose, onSuccess }: DeleteDialogProps) {
+  const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => e.key === "Escape" && !deleting && onClose();
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [onClose, deleting]);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    setError(null);
+
+    try {
+      if (node.isDirectory) {
+        await invoke("delete_folder", { path: node.path });
+      } else {
+        await invoke("delete_file", { path: node.path });
+      }
+      onSuccess();
+      onClose();
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={deleting ? undefined : onClose}>
+      <div className="bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+        <h2 className="text-lg font-semibold mb-4">Delete {node.isDirectory ? 'Folder' : 'File'}?</h2>
+
+        <p className="text-sm text-[var(--geist-accents-5)] mb-2">
+          Are you sure you want to delete <strong className="text-[var(--geist-foreground)]">{node.name}</strong>?
+        </p>
+
+        {node.isDirectory && (
+          <p className="text-sm text-[var(--geist-error)] mb-4">
+            This will permanently delete the folder and all its contents.
+          </p>
+        )}
+
+        {error && (
+          <div className="p-3 mb-4 bg-[var(--geist-error-light)] border border-[var(--geist-error)] rounded text-sm text-[var(--geist-error)]">
+            {error}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            disabled={deleting}
+            className="px-4 py-2 text-sm border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)] disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="px-4 py-2 text-sm bg-[var(--geist-error)] text-white rounded-full hover:opacity-90 disabled:opacity-50"
+          >
+            {deleting ? "Deleting..." : "Delete"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ResourceBoard() {
   const projectPath = useAppStore((s) => s.projectPath);
   const [tree, setTree] = useState<FileNode | null>(null);
@@ -219,6 +697,11 @@ export function ResourceBoard() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [fileType, setFileType] = useState<string>("all");
+  const [showNewFileDialog, setShowNewFileDialog] = useState(false);
+  const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
+  const [renameNode, setRenameNode] = useState<FileNode | null>(null);
+  const [deleteNode, setDeleteNode] = useState<FileNode | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ node: FileNode; x: number; y: number } | null>(null);
 
   useEffect(() => {
     if (projectPath) {
@@ -231,7 +714,7 @@ export function ResourceBoard() {
 
     setLoading(true);
     try {
-      const resourcePath = `${projectPath}/.m2k/resources`;
+      const resourcePath = `${projectPath}/resources`;
       const tree = await invoke<FileNode>("read_directory_tree", { path: resourcePath });
       setTree(tree);
     } catch (error) {
@@ -247,6 +730,17 @@ export function ResourceBoard() {
     if (searchQuery === "" && fileType === "all") return tree;
     return filterTree(tree, searchQuery, fileType);
   }, [tree, searchQuery, fileType]);
+
+  const handleContextMenu = (node: FileNode, event: React.MouseEvent) => {
+    setContextMenu({ node, x: event.clientX, y: event.clientY });
+  };
+
+  const handleRefresh = () => {
+    loadResourceTree();
+    setSelectedPath(null);
+  };
+
+  const resourcePath = projectPath ? `${projectPath}/resources` : "";
 
   if (loading) {
     return (
@@ -271,7 +765,25 @@ export function ResourceBoard() {
     <div className="h-full flex">
       <div className="w-64 border-r border-[var(--geist-accents-2)] flex flex-col">
         <div className="p-3 border-b border-[var(--geist-accents-2)]">
-          <h2 className="text-sm font-medium mb-3">Resources</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-medium">Resources</h2>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setShowNewFileDialog(true)}
+                className="p-1 hover:bg-[var(--geist-accents-1)] rounded"
+                title="New file"
+              >
+                <Plus size={16} />
+              </button>
+              <button
+                onClick={() => setShowNewFolderDialog(true)}
+                className="p-1 hover:bg-[var(--geist-accents-1)] rounded"
+                title="New folder"
+              >
+                <FolderPlus size={16} />
+              </button>
+            </div>
+          </div>
           <div className="relative mb-2">
             <Search size={14} className="absolute left-2 top-2 text-[var(--geist-accents-4)]" />
             <input
@@ -309,6 +821,7 @@ export function ResourceBoard() {
               level={0}
               selectedPath={selectedPath}
               onSelect={setSelectedPath}
+              onContextMenu={handleContextMenu}
             />
           ))}
           {filteredTree?.children?.length === 0 && (
@@ -325,6 +838,49 @@ export function ResourceBoard() {
           </div>
         )}
       </div>
+
+      {showNewFileDialog && (
+        <NewFileDialog
+          parentPath={resourcePath}
+          onClose={() => setShowNewFileDialog(false)}
+          onSuccess={handleRefresh}
+        />
+      )}
+
+      {showNewFolderDialog && (
+        <NewFolderDialog
+          parentPath={resourcePath}
+          onClose={() => setShowNewFolderDialog(false)}
+          onSuccess={handleRefresh}
+        />
+      )}
+
+      {renameNode && (
+        <RenameDialog
+          node={renameNode}
+          onClose={() => setRenameNode(null)}
+          onSuccess={handleRefresh}
+        />
+      )}
+
+      {deleteNode && (
+        <DeleteDialog
+          node={deleteNode}
+          onClose={() => setDeleteNode(null)}
+          onSuccess={handleRefresh}
+        />
+      )}
+
+      {contextMenu && (
+        <ContextMenu
+          node={contextMenu.node}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          onRename={(node) => setRenameNode(node)}
+          onDelete={(node) => setDeleteNode(node)}
+        />
+      )}
     </div>
   );
 }

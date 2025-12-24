@@ -606,6 +606,101 @@ fn read_directory_tree(path: String) -> Result<FileNode, String> {
     build_tree(path)
 }
 
+// File CRUD operations
+#[tauri::command]
+fn create_file(path: String, content: String) -> Result<(), String> {
+    let file_path = Path::new(&path);
+
+    if file_path.exists() {
+        return Err("File already exists".to_string());
+    }
+
+    if let Some(parent) = file_path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create parent directory: {}", e))?;
+    }
+
+    fs::write(file_path, content)
+        .map_err(|e| format!("Failed to create file: {}", e))
+}
+
+#[tauri::command]
+fn read_file(path: String) -> Result<String, String> {
+    fs::read_to_string(&path)
+        .map_err(|e| format!("Failed to read file: {}", e))
+}
+
+#[tauri::command]
+fn update_file(path: String, content: String) -> Result<(), String> {
+    if !Path::new(&path).exists() {
+        return Err("File does not exist".to_string());
+    }
+
+    fs::write(&path, content)
+        .map_err(|e| format!("Failed to update file: {}", e))
+}
+
+#[tauri::command]
+fn delete_file(path: String) -> Result<(), String> {
+    let file_path = Path::new(&path);
+
+    if !file_path.exists() {
+        return Err("File does not exist".to_string());
+    }
+
+    if file_path.is_dir() {
+        return Err("Cannot delete directory with delete_file, use delete_folder instead".to_string());
+    }
+
+    fs::remove_file(file_path)
+        .map_err(|e| format!("Failed to delete file: {}", e))
+}
+
+#[tauri::command]
+fn create_folder(path: String) -> Result<(), String> {
+    let folder_path = Path::new(&path);
+
+    if folder_path.exists() {
+        return Err("Folder already exists".to_string());
+    }
+
+    fs::create_dir_all(folder_path)
+        .map_err(|e| format!("Failed to create folder: {}", e))
+}
+
+#[tauri::command]
+fn delete_folder(path: String) -> Result<(), String> {
+    let folder_path = Path::new(&path);
+
+    if !folder_path.exists() {
+        return Err("Folder does not exist".to_string());
+    }
+
+    if !folder_path.is_dir() {
+        return Err("Path is not a directory".to_string());
+    }
+
+    fs::remove_dir_all(folder_path)
+        .map_err(|e| format!("Failed to delete folder: {}", e))
+}
+
+#[tauri::command]
+fn rename_file_or_folder(old_path: String, new_path: String) -> Result<(), String> {
+    let old = Path::new(&old_path);
+    let new = Path::new(&new_path);
+
+    if !old.exists() {
+        return Err("Source path does not exist".to_string());
+    }
+
+    if new.exists() {
+        return Err("Destination path already exists".to_string());
+    }
+
+    fs::rename(old, new)
+        .map_err(|e| format!("Failed to rename: {}", e))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -659,7 +754,14 @@ pub fn run() {
             project_path_exists,
             path_exists,
             init_m2k_folder,
-            read_directory_tree
+            read_directory_tree,
+            create_file,
+            read_file,
+            update_file,
+            delete_file,
+            create_folder,
+            delete_folder,
+            rename_file_or_folder
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
