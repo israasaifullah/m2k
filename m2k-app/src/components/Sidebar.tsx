@@ -1,7 +1,6 @@
 import { Settings, FolderOpen, Plus, Sparkles, LayoutGrid, ChevronDown, ChevronRight, Folder, AlertTriangle, Files } from "lucide-react";
 import { useAppStore, RegisteredProject } from "../lib/store";
 import { useProjectLoader } from "../hooks/useProjectLoader";
-import { StartEpicButton } from "./StartEpicButton";
 import { ProjectContextMenu } from "./ProjectContextMenu";
 import { useState, useEffect } from "react";
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronRight, ChevronDown, Folder, File, FileText, Image, FileCode, Search, X, Plus, FolderPlus, Edit2, Trash2, MoreVertical, Save } from "lucide-react";
+import { ChevronRight, ChevronDown, Folder, File, FileText, Image, FileCode, Search, X, Plus, FolderPlus, Edit2, Trash2, Save, Upload } from "lucide-react";
 import { useAppStore } from "../lib/store";
 import { invoke } from "@tauri-apps/api/core";
 import { MarkdownEditor } from "./MarkdownEditor";
@@ -705,6 +705,9 @@ export function ResourceBoard() {
   const [renameNode, setRenameNode] = useState<FileNode | null>(null);
   const [deleteNode, setDeleteNode] = useState<FileNode | null>(null);
   const [contextMenu, setContextMenu] = useState<{ node: FileNode; x: number; y: number } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string[]>([]);
 
   useEffect(() => {
     if (projectPath) {
@@ -741,6 +744,74 @@ export function ResourceBoard() {
   const handleRefresh = () => {
     loadResourceTree();
     setSelectedPath(null);
+  };
+
+  const handleFileUpload = async (files: FileList | File[]) => {
+    if (!projectPath) return;
+
+    setUploading(true);
+    setUploadProgress([]);
+
+    const fileArray = Array.from(files);
+
+    for (const file of fileArray) {
+      try {
+        setUploadProgress(prev => [...prev, `Uploading ${file.name}...`]);
+
+        await invoke<string>("upload_resource", {
+          projectPath,
+          sourcePath: (file as any).path,
+          filename: file.name,
+        });
+
+        setUploadProgress(prev => [...prev, `✓ ${file.name} uploaded`]);
+      } catch (err) {
+        setUploadProgress(prev => [...prev, `✗ ${file.name} failed: ${err}`]);
+      }
+    }
+
+    setUploading(false);
+    setTimeout(() => {
+      setUploadProgress([]);
+      handleRefresh();
+    }, 2000);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      await handleFileUpload(files);
+    }
+  };
+
+  const handleFilePickerClick = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.multiple = true;
+    input.accept = 'image/*,.pdf,.doc,.docx,.xls,.xlsx,.md,.txt';
+    input.onchange = (e) => {
+      const files = (e.target as HTMLInputElement).files;
+      if (files && files.length > 0) {
+        handleFileUpload(files);
+      }
+    };
+    input.click();
   };
 
   const resourcePath = projectPath ? `${projectPath}/resources` : "";
@@ -815,8 +886,33 @@ export function ResourceBoard() {
             <option value="image">Images</option>
             <option value="code">Code</option>
           </select>
+          <button
+            onClick={handleFilePickerClick}
+            disabled={uploading}
+            className="w-full mt-2 px-3 py-2 text-sm bg-[var(--geist-success)] text-white rounded hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            <Upload size={16} />
+            {uploading ? "Uploading..." : "Upload Files"}
+          </button>
+          {uploadProgress.length > 0 && (
+            <div className="mt-2 p-2 bg-[var(--geist-accents-1)] rounded text-xs space-y-1">
+              {uploadProgress.map((msg, idx) => (
+                <div key={idx} className="text-[var(--geist-accents-6)]">{msg}</div>
+              ))}
+            </div>
+          )}
         </div>
-        <div className="flex-1 overflow-y-auto py-1">
+        <div
+          className="flex-1 overflow-y-auto py-1 relative"
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {isDragging && (
+            <div className="absolute inset-0 bg-[var(--geist-success)]/10 border-2 border-dashed border-[var(--geist-success)] flex items-center justify-center z-10">
+              <p className="text-[var(--geist-success)] font-medium">Drop files to upload</p>
+            </div>
+          )}
           {filteredTree?.children?.map((child) => (
             <TreeItem
               key={child.path}

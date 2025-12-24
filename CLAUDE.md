@@ -4,6 +4,24 @@
 - Ask the user if there is any unresolved questions.
 
 ## Working on an EPIC
+- All epics can be find under .m2k folder
+
+## Directory Structure
+
+```
+.m2k/
+  epics/        # Epic definitions (EPIC-XXX-<name>.md)
+  backlog/      # Tickets ready for work (T-XXX-<name>.md)
+  in-progress/  # Currently being worked on
+  done/         # Completed (archive)
+  templates/    # Epic and ticket templates
+```
+
+## Ticket Lifecycle
+
+```
+backlog/ → in-progress/ → done/
+```
 
 ## If user ask to run an entire EPIC 
 - When assign to an epic, find all the tickets related to that epic, work on it 1 by 1 and update the ticket status. If complete, can move the ticket into the /done folder. 
@@ -12,19 +30,10 @@
 
 - Clear the context after every epic work.
 
-#### IGNORE FOR NOW ####
-- If user start an execution with a full EPIC, after every completed execution of epic, create a new branch and make a commit
-- Features Branch: `feature/{epic_tag}/{description}`
-- Bugfixes Branch: `bugfix/{epic_tag}/{description}`
-#### END IGNORE FOR NOW ####
-
-## If user ask to run a single TICKET
-
-#### IGNORE FOR NOW ####
+## Commit Strategy
 - If user start an execution with a ticket, after every completed execution of ticket, create a new branch and make a commit
 - Features Branch: `feature/{ticket_tag}/{description}`
 - Bugfixes Branch: `bugfix/{ticket_tag}/{description}`
-#### END IGNORE FOR NOW ####
 
 ### Commit Convention
 Include ticket reference in commit messages:

@@ -5,7 +5,7 @@ This document describes the epic and ticket workflow for the FOAMMS Mobile proje
 ## Directory Structure
 
 ```
-project-management/
+.m2k/
   epics/        # Epic definitions (EPIC-XXX-<name>.md)
   backlog/      # Tickets ready for work (T-XXX-<name>.md)
   in-progress/  # Currently being worked on
@@ -18,12 +18,6 @@ project-management/
 ```
 backlog/ → in-progress/ → done/
 ```
-
-| Status | Location | Description |
-|--------|----------|-------------|
-| backlog | `docs/backlog/` | Ticket is defined and ready for work |
-| in-progress | `docs/in-progress/` | Actively being worked on |
-| done | `docs/done/` | PR merged, archived |
 
 ## Branch & Commit Convention
 
