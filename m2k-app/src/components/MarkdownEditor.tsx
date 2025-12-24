@@ -1,6 +1,6 @@
 import Editor, { loader } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { initVimMode, VimMode } from "monaco-vim";
 import { useAppStore } from "../lib/store";
 
