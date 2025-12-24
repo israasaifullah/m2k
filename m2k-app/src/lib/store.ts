@@ -37,6 +37,19 @@ interface SmartModeState {
   error: string | null;
 }
 
+export type ExecutionStatus = "idle" | "running" | "paused" | "completed" | "error";
+
+export interface ExecutionState {
+  status: ExecutionStatus;
+  epicId: string | null;
+  currentTicketId: string | null;
+  completedTickets: string[];
+  totalTickets: number;
+  output: string[];
+  error: string | null;
+  startedAt: number | null;
+}
+
 interface AppState {
   tickets: Ticket[];
   epics: Epic[];
@@ -45,6 +58,7 @@ interface AppState {
   viewMode: ViewMode;
   prdState: PrdState;
   smartModeState: SmartModeState;
+  executionState: ExecutionState;
   setTickets: (tickets: Ticket[]) => void;
   setEpics: (epics: Epic[]) => void;
   setSelectedEpic: (epicId: string | null) => void;
@@ -55,6 +69,9 @@ interface AppState {
   resetPrdState: () => void;
   setSmartModeState: (state: Partial<SmartModeState>) => void;
   resetSmartModeState: () => void;
+  setExecutionState: (state: Partial<ExecutionState>) => void;
+  resetExecutionState: () => void;
+  addExecutionOutput: (line: string) => void;
 }
 
 const defaultPrdState: PrdState = {
@@ -71,6 +88,17 @@ const defaultSmartModeState: SmartModeState = {
   error: null,
 };
 
+const defaultExecutionState: ExecutionState = {
+  status: "idle",
+  epicId: null,
+  currentTicketId: null,
+  completedTickets: [],
+  totalTickets: 0,
+  output: [],
+  error: null,
+  startedAt: null,
+};
+
 export const useAppStore = create<AppState>((set, get) => ({
   tickets: [],
   epics: [],
@@ -79,6 +107,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   viewMode: "kanban",
   prdState: { ...defaultPrdState },
   smartModeState: { ...defaultSmartModeState },
+  executionState: { ...defaultExecutionState },
   setTickets: (tickets) => set({ tickets }),
   setEpics: (epics) => set({ epics }),
   setSelectedEpic: (epicId) => set({ selectedEpic: epicId }),
@@ -93,4 +122,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   resetPrdState: () => set({ prdState: { ...defaultPrdState } }),
   setSmartModeState: (state) => set((s) => ({ smartModeState: { ...s.smartModeState, ...state } })),
   resetSmartModeState: () => set({ smartModeState: { ...defaultSmartModeState } }),
+  setExecutionState: (state) => set((s) => ({ executionState: { ...s.executionState, ...state } })),
+  resetExecutionState: () => set({ executionState: { ...defaultExecutionState } }),
+  addExecutionOutput: (line) => set((s) => ({
+    executionState: {
+      ...s.executionState,
+      output: [...s.executionState.output.slice(-500), line], // Keep last 500 lines
+    },
+  })),
 }));

@@ -6,6 +6,7 @@ import { StartEpicButton } from "./components/StartEpicButton";
 import { PRDMode } from "./components/PRDMode";
 import { SmartMode } from "./components/SmartMode";
 import { SettingsPage } from "./components/SettingsPage";
+import { ExecutionStatusPanel } from "./components/ExecutionStatusPanel";
 import { useAppStore } from "./lib/store";
 import { useProjectLoader } from "./hooks/useProjectLoader";
 
@@ -132,6 +133,7 @@ function App() {
         {viewMode === "smart" && <SmartMode />}
         {viewMode === "settings" && <SettingsPage />}
       </div>
+      <ExecutionStatusPanel />
     </main>
   );
 }

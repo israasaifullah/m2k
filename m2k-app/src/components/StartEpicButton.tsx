@@ -131,6 +131,8 @@ export function StartEpicButton() {
   const epics = useAppStore((s) => s.epics);
   const tickets = useAppStore((s) => s.tickets);
   const projectPath = useAppStore((s) => s.projectPath);
+  const setExecutionState = useAppStore((s) => s.setExecutionState);
+  const executionState = useAppStore((s) => s.executionState);
   const [showDialog, setShowDialog] = useState(false);
   const [cliInstalled, setCliInstalled] = useState<boolean | null>(null);
   const [cliVersion, setCliVersion] = useState<string | null>(null);
@@ -140,6 +142,7 @@ export function StartEpicButton() {
   const epic = epics.find((e) => e.id === selectedEpic);
   const epicTickets = tickets.filter((t) => t.epic === selectedEpic);
   const hasInProgressTickets = epicTickets.some((t) => t.status === "in_progress");
+  const isExecutionRunning = executionState.status === "running";
 
   // Check CLI installation when dialog opens
   useEffect(() => {
@@ -175,6 +178,20 @@ export function StartEpicButton() {
     setStarting(true);
     setError(null);
 
+    const backlogTickets = epicTickets.filter((t) => t.status === "backlog");
+
+    // Set execution state
+    setExecutionState({
+      status: "running",
+      epicId: selectedEpic,
+      currentTicketId: backlogTickets[0]?.id || null,
+      completedTickets: [],
+      totalTickets: backlogTickets.length,
+      output: [],
+      error: null,
+      startedAt: Date.now(),
+    });
+
     try {
       // Build comprehensive prompt for the epic
       const prompt = buildEpicPrompt({
@@ -183,18 +200,26 @@ export function StartEpicButton() {
         projectPath,
       });
 
-      await invoke("start_claude_cli", {
+      setShowDialog(false);
+
+      const result = await invoke<{ success: boolean; error?: string }>("start_claude_cli", {
         prompt,
         workingDir: projectPath,
       });
 
-      setShowDialog(false);
+      if (result.success) {
+        setExecutionState({ status: "completed" });
+      } else {
+        setExecutionState({ status: "error", error: result.error || "Execution failed" });
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setError(errMsg);
+      setExecutionState({ status: "error", error: errMsg });
     } finally {
       setStarting(false);
     }
-  }, [projectPath, selectedEpic, epic, epicTickets]);
+  }, [projectPath, selectedEpic, epic, epicTickets, setExecutionState]);
 
   const handleCancel = useCallback(() => {
     if (!starting) {
@@ -210,10 +235,10 @@ export function StartEpicButton() {
     <>
       <button
         onClick={handleStartClick}
-        disabled={hasInProgressTickets}
+        disabled={hasInProgressTickets || isExecutionRunning}
         className="px-3 py-1 text-xs md:text-sm bg-[var(--geist-success)] text-white rounded-full hover:opacity-90 transition-opacity whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50 disabled:cursor-not-allowed"
         aria-label={`Start epic ${selectedEpic}`}
-        title={hasInProgressTickets ? "Epic has tickets in progress" : `Start ${selectedEpic}`}
+        title={isExecutionRunning ? "Execution in progress" : hasInProgressTickets ? "Epic has tickets in progress" : `Start ${selectedEpic}`}
       >
         Start
       </button>
