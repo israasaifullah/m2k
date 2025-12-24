@@ -25,7 +25,7 @@ pub struct Epic {
 
 pub fn parse_tickets(project_path: &str) -> Result<Vec<Ticket>, String> {
     let mut tickets = Vec::new();
-    let folders = ["backlog", "in-progress", "done"];
+    let folders = ["backlog", "in-progress", "inprogress", "done"];
 
     for folder in folders {
         let folder_path = Path::new(project_path).join(folder);
@@ -119,7 +119,7 @@ fn extract_criteria(content: &str) -> Vec<String> {
 fn folder_to_status(folder: &str) -> String {
     match folder {
         "backlog" => "backlog".to_string(),
-        "in-progress" => "in_progress".to_string(),
+        "in-progress" | "inprogress" => "in_progress".to_string(),
         "done" => "done".to_string(),
         _ => "backlog".to_string(),
     }

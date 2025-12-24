@@ -16,7 +16,7 @@ pub fn start_watcher(app: AppHandle, project_path: String) -> Result<(), String>
         let mut watcher: RecommendedWatcher =
             Watcher::new(tx, Config::default()).expect("Failed to create watcher");
 
-        let folders = ["backlog", "in-progress", "done", "epics"];
+        let folders = ["backlog", "in-progress", "inprogress", "done", "epics"];
         for folder in folders {
             let folder_path = Path::new(&project_path).join(folder);
             if folder_path.exists() {
