@@ -67,13 +67,14 @@ export function StatsPill({
         className={`${iconColorClasses[color]} shrink-0`}
         aria-hidden="true"
       />
-      <div className="flex flex-col min-w-0">
-        <span className={`${textSizes[size].label} text-[var(--geist-accents-5)] truncate`}>
-          {label} {value}
+        <div className="flex items-center min-w-0 gap-2">
+          <span className={`${textSizes[size].label} text-[var(--geist-accents-5)] truncate`}>
+          {label}
         </span>
-        {/* <span className={`${textSizes[size].value} font-semibold text-[var(--geist-foreground)] truncate`}>
+
+        <span className={`${textSizes[size].value} font-semibold text-[var(--geist-foreground)] truncate`}>
           {value}
-        </span> */}
+        </span>
       </div>
     </div>
   );

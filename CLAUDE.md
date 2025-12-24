@@ -10,7 +10,7 @@
 
 - Clear the context after every epic work.
 
-- After every completed execution of ticket, create a new branch and make a commit
+- After every completed execution of epic, create a new branch and make a commit
 - Features Branch: `feature/{epic_tag}/{description}`
 - Bugfixes Branch: `bugfix/{epic_tag}/{description}`
 
@@ -20,3 +20,30 @@ Include ticket reference in commit messages:
 feat: description (T-XXX)
 fix: description (T-XXX)
 ```
+
+### Refactor Rules
+1. After every 5 completions of epics, strictly strictly remind the engineer to create a refactor epic.
+
+### Clean Code Conventions
+
+1. Business logic with more than 1 line and nested inside branching condition should extract
+```
+DONT:
+if (condition1)
+    routine1
+    routine2
+    routine2
+else
+    routine1
+    routine2
+    routine2
+
+DO:
+if (condition1)
+    Routine1()
+else
+    Routine2()
+```
+
+### Maintaining Readability
+1. After every runs of epics, update the changed Class Interfaces and put it in the resource folder.
