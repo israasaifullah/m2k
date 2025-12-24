@@ -1,9 +1,18 @@
+import { useMemo } from "react";
 import { useAppStore } from "../lib/store";
 
 export function EpicFilter() {
   const epics = useAppStore((s) => s.epics);
   const selectedEpic = useAppStore((s) => s.selectedEpic);
   const setSelectedEpic = useAppStore((s) => s.setSelectedEpic);
+
+  const sortedEpics = useMemo(() => {
+    return [...epics].sort((a, b) => {
+      const numA = parseInt(a.id.replace(/\D/g, ""), 10) || 0;
+      const numB = parseInt(b.id.replace(/\D/g, ""), 10) || 0;
+      return numA - numB;
+    });
+  }, [epics]);
 
   return (
     <div className="flex items-center gap-2">
@@ -14,7 +23,7 @@ export function EpicFilter() {
         className="px-3 py-1.5 text-sm bg-[var(--geist-accents-1)] border border-[var(--geist-accents-3)] rounded-md text-[var(--geist-foreground)] focus:border-[var(--geist-accents-5)] focus:outline-none transition-colors"
       >
         <option value="">All</option>
-        {epics.map((epic) => (
+        {sortedEpics.map((epic) => (
           <option key={epic.id} value={epic.id}>
             {epic.id}: {epic.title}
           </option>

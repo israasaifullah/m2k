@@ -1,5 +1,14 @@
 import { useAppStore } from "../lib/store";
 import { KanbanColumn } from "./KanbanColumn";
+import type { Ticket } from "../types";
+
+function sortByTicketId(tickets: Ticket[]): Ticket[] {
+  return [...tickets].sort((a, b) => {
+    const numA = parseInt(a.id.replace(/\D/g, ""), 10) || 0;
+    const numB = parseInt(b.id.replace(/\D/g, ""), 10) || 0;
+    return numA - numB;
+  });
+}
 
 export function KanbanBoard() {
   const tickets = useAppStore((s) => s.tickets);
@@ -9,9 +18,9 @@ export function KanbanBoard() {
     ? tickets.filter((t) => t.epic === selectedEpic)
     : tickets;
 
-  const backlog = filteredTickets.filter((t) => t.status === "backlog");
-  const inProgress = filteredTickets.filter((t) => t.status === "in_progress");
-  const done = filteredTickets.filter((t) => t.status === "done");
+  const backlog = sortByTicketId(filteredTickets.filter((t) => t.status === "backlog"));
+  const inProgress = sortByTicketId(filteredTickets.filter((t) => t.status === "in_progress"));
+  const done = sortByTicketId(filteredTickets.filter((t) => t.status === "done"));
 
   return (
     <div className="grid grid-cols-3 gap-4 p-4 h-full min-h-0">
