@@ -23,7 +23,7 @@ export function KanbanBoard() {
   const done = sortByTicketId(filteredTickets.filter((t) => t.status === "done"));
 
   return (
-    <div className="grid grid-cols-3 gap-4 p-4 h-full min-h-0">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 p-3 md:p-4 h-full min-h-0 overflow-auto">
       <KanbanColumn title="Backlog" tickets={backlog} />
       <KanbanColumn title="In Progress" tickets={inProgress} />
       <KanbanColumn title="Done" tickets={done} />
