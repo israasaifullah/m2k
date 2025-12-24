@@ -16,11 +16,13 @@ export function EpicFilter() {
 
   return (
     <div className="flex items-center gap-1.5 md:gap-2">
-      <span className="text-xs md:text-sm text-[var(--geist-accents-5)]">Epic:</span>
+      <label htmlFor="epic-filter" className="text-xs md:text-sm text-[var(--geist-accents-5)]">Epic:</label>
       <select
+        id="epic-filter"
         value={selectedEpic || ""}
         onChange={(e) => setSelectedEpic(e.target.value || null)}
-        className="px-2 md:px-3 py-1 md:py-1.5 text-xs md:text-sm bg-[var(--geist-accents-1)] border border-[var(--geist-accents-3)] rounded-md text-[var(--geist-foreground)] focus:border-[var(--geist-accents-5)] focus:outline-none transition-colors max-w-[150px] md:max-w-none"
+        className="px-2 md:px-3 py-1 md:py-1.5 text-xs md:text-sm bg-[var(--geist-accents-1)] border border-[var(--geist-accents-3)] rounded-md text-[var(--geist-foreground)] focus:border-[var(--geist-success)] focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] transition-colors max-w-[150px] md:max-w-none"
+        aria-label="Filter tickets by epic"
       >
         <option value="">All</option>
         {sortedEpics.map((epic) => (

@@ -30,23 +30,44 @@ export function TicketCard({ ticket }: Props) {
   const epicColor = epicColors[ticket.epic] || "bg-[var(--geist-accents-4)]";
   const isInProgress = ticket.status === "in_progress";
 
-  const baseClass = "rounded-lg p-3 cursor-pointer transition-all duration-200 ease-out animate-fade-in hover:scale-[1.01] hover:shadow-lg";
+  const toggle = () => setExpanded(!expanded);
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      toggle();
+    }
+  };
+
+  const baseClass = "rounded-lg p-3 cursor-pointer transition-all duration-200 ease-out animate-fade-in hover:scale-[1.01] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]";
   const cardClass = isInProgress
     ? `${baseClass} bg-[var(--geist-accents-1)] hover:bg-[var(--geist-accents-2)] border border-[var(--geist-success)] animate-pulse-subtle`
     : `${baseClass} bg-[var(--geist-background)] hover:bg-[var(--geist-accents-1)] border border-[var(--geist-accents-2)]`;
 
   return (
-    <div className={cardClass} onClick={() => setExpanded(!expanded)}>
+    <article
+      className={cardClass}
+      onClick={toggle}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      role="button"
+      aria-expanded={expanded}
+      aria-label={`${ticket.id}: ${ticket.title}${isInProgress ? ", currently in progress" : ""}`}
+    >
       <div className="flex items-center gap-2 flex-wrap">
-        {isInProgress && <PulsingDot />}
-        <span className={`${epicColor} text-white text-xs px-1.5 py-0.5 rounded font-medium transition-transform hover:scale-105`}>
+        {isInProgress && (
+          <>
+            <PulsingDot />
+            <span className="sr-only">In progress</span>
+          </>
+        )}
+        <span className={`${epicColor} text-white text-xs px-1.5 py-0.5 rounded font-medium`} aria-label={`Epic ${ticket.epic}`}>
           {ticket.epic}
         </span>
         <span className="text-xs text-[var(--geist-accents-5)] font-mono">
           {ticket.id}
         </span>
         {isInProgress && (
-          <span className="ml-auto text-xs text-[var(--geist-success)] font-medium animate-pulse">
+          <span className="ml-auto text-xs text-[var(--geist-success)] font-medium animate-pulse" aria-hidden="true">
             Working...
           </span>
         )}
@@ -57,6 +78,6 @@ export function TicketCard({ ticket }: Props) {
           {ticket.description}
         </p>
       )}
-    </div>
+    </article>
   );
 }
