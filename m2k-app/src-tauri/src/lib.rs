@@ -1,10 +1,13 @@
 mod claude;
 mod claude_cli;
+mod db;
 mod parser;
+mod pty;
 mod watcher;
 
 use claude::GeneratedEpic;
 use claude_cli::ClaudeCliResult;
+use db::Project;
 use keyring::Entry;
 use parser::{Epic, Ticket};
 use serde::{Deserialize, Serialize};
@@ -414,11 +417,90 @@ async fn generate_epic(
     claude::generate_epic_and_tickets(requirements, next_epic_id, next_ticket_id).await
 }
 
+#[tauri::command]
+fn spawn_pty(app: AppHandle, working_dir: String, cols: u16, rows: u16) -> Result<u32, String> {
+    pty::spawn_pty(app, working_dir, cols, rows)
+}
+
+#[tauri::command]
+fn write_pty(pty_id: u32, data: String) -> Result<(), String> {
+    pty::write_pty(pty_id, data)
+}
+
+#[tauri::command]
+fn resize_pty(pty_id: u32, cols: u16, rows: u16) -> Result<(), String> {
+    pty::resize_pty(pty_id, cols, rows)
+}
+
+#[tauri::command]
+fn kill_pty(pty_id: u32) -> Result<(), String> {
+    pty::kill_pty(pty_id)
+}
+
+// Project Registry Commands
+#[tauri::command]
+fn init_project_db() -> Result<(), String> {
+    db::init_database()
+}
+
+#[tauri::command]
+fn add_project(name: String, path: String) -> Result<Project, String> {
+    db::add_project(&name, &path)
+}
+
+#[tauri::command]
+fn get_all_projects() -> Result<Vec<Project>, String> {
+    db::get_all_projects()
+}
+
+#[tauri::command]
+fn get_project_by_path(path: String) -> Result<Option<Project>, String> {
+    db::get_project_by_path(&path)
+}
+
+#[tauri::command]
+fn update_project_last_accessed(id: i64) -> Result<(), String> {
+    db::update_last_accessed(id)
+}
+
+#[tauri::command]
+fn rename_project(id: i64, new_name: String) -> Result<(), String> {
+    db::rename_project(id, &new_name)
+}
+
+#[tauri::command]
+fn remove_project(id: i64) -> Result<(), String> {
+    db::remove_project(id)
+}
+
+#[tauri::command]
+fn set_app_state_value(key: String, value: String) -> Result<(), String> {
+    db::set_app_state(&key, &value)
+}
+
+#[tauri::command]
+fn get_app_state_value(key: String) -> Result<Option<String>, String> {
+    db::get_app_state(&key)
+}
+
+#[tauri::command]
+fn project_path_exists(path: String) -> Result<bool, String> {
+    db::project_path_exists(&path)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
+        .setup(|_app| {
+            // Initialize database on startup
+            if let Err(e) = db::init_database() {
+                log::error!("Failed to initialize database: {}", e);
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             load_config,
             save_config,
@@ -442,7 +524,21 @@ pub fn run() {
             stop_claude_cli,
             is_claude_cli_running,
             move_ticket_to_status,
-            update_epic_ticket_status
+            update_epic_ticket_status,
+            spawn_pty,
+            write_pty,
+            resize_pty,
+            kill_pty,
+            init_project_db,
+            add_project,
+            get_all_projects,
+            get_project_by_path,
+            update_project_last_accessed,
+            rename_project,
+            remove_project,
+            set_app_state_value,
+            get_app_state_value,
+            project_path_exists
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
