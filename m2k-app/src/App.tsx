@@ -1,12 +1,21 @@
 import "./App.css";
 import { KanbanBoard } from "./components/KanbanBoard";
 import { EpicFilter } from "./components/EpicFilter";
+import { PRDMode } from "./components/PRDMode";
 import { useAppStore } from "./lib/store";
 import { useProjectLoader } from "./hooks/useProjectLoader";
 
 function App() {
   const projectPath = useAppStore((s) => s.projectPath);
+  const viewMode = useAppStore((s) => s.viewMode);
+  const setViewMode = useAppStore((s) => s.setViewMode);
+  const resetPrdState = useAppStore((s) => s.resetPrdState);
   const { selectFolder } = useProjectLoader();
+
+  const handleCreateNew = () => {
+    resetPrdState();
+    setViewMode("prd");
+  };
 
   if (!projectPath) {
     return (
@@ -35,7 +44,14 @@ function App() {
       <header className="px-3 md:px-4 py-2 md:py-3 border-b border-[var(--geist-accents-2)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2" role="banner">
         <h1 className="text-lg font-semibold">M2K</h1>
         <nav className="flex items-center gap-2 md:gap-4 flex-wrap" aria-label="Main controls">
-          <EpicFilter />
+          {viewMode === "kanban" && <EpicFilter />}
+          <button
+            onClick={handleCreateNew}
+            className="px-2 md:px-3 py-1 md:py-1.5 text-xs md:text-sm bg-[var(--geist-success)] text-white rounded-md hover:opacity-90 transition-opacity whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]"
+            aria-label="Create new epic or ticket"
+          >
+            + New
+          </button>
           <button
             onClick={selectFolder}
             className="px-2 md:px-3 py-1 md:py-1.5 text-xs md:text-sm border border-[var(--geist-accents-3)] rounded-md hover:bg-[var(--geist-accents-1)] transition-colors whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]"
@@ -45,8 +61,8 @@ function App() {
           </button>
         </nav>
       </header>
-      <div className="flex-1 min-h-0" role="region" aria-label="Kanban board">
-        <KanbanBoard />
+      <div className="flex-1 min-h-0" role="region" aria-label={viewMode === "kanban" ? "Kanban board" : "PRD editor"}>
+        {viewMode === "kanban" ? <KanbanBoard /> : <PRDMode />}
       </div>
     </main>
   );
