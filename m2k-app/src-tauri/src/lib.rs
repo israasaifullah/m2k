@@ -310,7 +310,12 @@ fn move_ticket_to_status(
     ticket_id: String,
     new_status: String,
 ) -> Result<(), String> {
-    let project_dir = PathBuf::from(&project_path).join(".m2k");
+    // Normalize path - if it already ends with .m2k, use as-is, otherwise append
+    let project_dir = if project_path.ends_with(".m2k") || project_path.ends_with(".m2k/") {
+        PathBuf::from(&project_path)
+    } else {
+        PathBuf::from(&project_path).join(".m2k")
+    };
 
     // Find the current ticket file
     let folders = ["backlog", "inprogress", "done"];
@@ -353,9 +358,13 @@ fn update_epic_ticket_status(
     ticket_id: String,
     new_status: String,
 ) -> Result<(), String> {
-    let epics_dir = PathBuf::from(&project_path)
-        .join(".m2k")
-        .join("epics");
+    // Normalize path - if it already ends with .m2k, use as-is, otherwise append
+    let base_dir = if project_path.ends_with(".m2k") || project_path.ends_with(".m2k/") {
+        PathBuf::from(&project_path)
+    } else {
+        PathBuf::from(&project_path).join(".m2k")
+    };
+    let epics_dir = base_dir.join("epics");
 
     // Find the epic file
     let entries = fs::read_dir(&epics_dir)
@@ -488,6 +497,48 @@ fn project_path_exists(path: String) -> Result<bool, String> {
     db::project_path_exists(&path)
 }
 
+#[tauri::command]
+fn path_exists(path: String) -> bool {
+    std::path::Path::new(&path).exists()
+}
+
+#[tauri::command]
+fn init_m2k_folder(project_path: String) -> Result<String, String> {
+    let m2k_path = PathBuf::from(&project_path).join(".m2k");
+
+    // Create .m2k folder and subfolders
+    let folders = ["backlog", "inprogress", "done", "epics", "resources"];
+
+    for folder in folders {
+        let folder_path = m2k_path.join(folder);
+        fs::create_dir_all(&folder_path)
+            .map_err(|e| format!("Failed to create {}: {}", folder, e))?;
+    }
+
+    // Create WORKFLOW.md if it doesn't exist
+    let workflow_path = m2k_path.join("WORKFLOW.md");
+    if !workflow_path.exists() {
+        let workflow_content = r#"# M2K Workflow
+
+## Folder Structure
+- **backlog/**: Tickets waiting to be worked on
+- **inprogress/**: Tickets currently being worked on
+- **done/**: Completed tickets
+- **epics/**: Epic definitions
+- **resources/**: Project resources and documentation
+
+## Ticket Lifecycle
+1. Create ticket in backlog/
+2. Move to inprogress/ when starting work
+3. Move to done/ when completed
+"#;
+        fs::write(&workflow_path, workflow_content)
+            .map_err(|e| format!("Failed to create WORKFLOW.md: {}", e))?;
+    }
+
+    Ok(m2k_path.to_string_lossy().to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -538,7 +589,9 @@ pub fn run() {
             remove_project,
             set_app_state_value,
             get_app_state_value,
-            project_path_exists
+            project_path_exists,
+            path_exists,
+            init_m2k_folder
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

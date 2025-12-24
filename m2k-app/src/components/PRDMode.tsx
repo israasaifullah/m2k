@@ -144,7 +144,7 @@ export function PRDMode() {
         showToast("File saved successfully", "success");
       } else if (prdState.docType === "epic") {
         const nextId = await invoke<number>("get_next_epic_id", {
-          projectPath: `${projectPath}/.m2k`,
+          projectPath: `${projectPath}`,
         });
         const paddedId = nextId.toString().padStart(3, "0");
         const titleMatch = prdState.content.match(/^# EPIC-[\d{}\w]+: (.+)$/m);
@@ -152,7 +152,7 @@ export function PRDMode() {
         const safeName = title
           .replace(/[^a-zA-Z0-9\s-]/g, "")
           .replace(/\s+/g, "-");
-        const filePath = `${projectPath}/.m2k/epics/EPIC-${paddedId}-${safeName}.md`;
+        const filePath = `${projectPath}/epics/EPIC-${paddedId}-${safeName}.md`;
         const content = prdState.content.replace(
           /EPIC-\{ID\}/g,
           `EPIC-${paddedId}`
@@ -166,10 +166,10 @@ export function PRDMode() {
           return;
         }
         const nextId = await invoke<number>("get_next_ticket_id", {
-          projectPath: `${projectPath}/.m2k`,
+          projectPath: `${projectPath}`,
         });
         const paddedId = nextId.toString().padStart(3, "0");
-        const filePath = `${projectPath}/.m2k/backlog/T-${paddedId}.md`;
+        const filePath = `${projectPath}/backlog/T-${paddedId}.md`;
         let content = prdState.content
           .replace(/T-\{ID\}/g, `T-${paddedId}`)
           .replace(/EPIC-\{EPIC_ID\}/g, selectedEpic)

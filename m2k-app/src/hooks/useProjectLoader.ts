@@ -1,11 +1,10 @@
 import { useEffect, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open, confirm } from "@tauri-apps/plugin-dialog";
 import { useAppStore, RegisteredProject } from "../lib/store";
 import { loadConfig, saveConfig } from "../lib/config";
 import type { Ticket, Epic } from "../types";
-import { exists } from "@tauri-apps/plugin-fs";
 
 export function useProjectLoader() {
   const setProjectPath = useAppStore((s) => s.setProjectPath);
@@ -20,10 +19,8 @@ export function useProjectLoader() {
 
   const validateProjectPath = useCallback(async (path: string): Promise<boolean> => {
     try {
-      const pathExists = await exists(path);
-      if (!pathExists) return false;
-      const m2kExists = await exists(`${path}/.m2k`);
-      return m2kExists;
+      // Path already includes .m2k suffix, just check if it exists
+      return await invoke<boolean>("path_exists", { path });
     } catch {
       return false;
     }
@@ -31,12 +28,17 @@ export function useProjectLoader() {
 
   const loadProject = useCallback(async (path: string): Promise<{ success: boolean; error?: string }> => {
     try {
+      path = `${path}`;
+      if (!path.endsWith("/.m2k")) {
+        path = `${path}/.m2k`;
+      }
       const isValid = await validateProjectPath(path);
       if (!isValid) {
         return { success: false, error: `Project not found or missing .m2k folder: ${path}` };
       }
 
-      const m2kPath = `${path}/.m2k`;
+      const m2kPath = `${path}`;
+      console.log("Loading project from:", m2kPath);
       const [tickets, epics] = await Promise.all([
         invoke<Ticket[]>("parse_tickets", { path: m2kPath }),
         invoke<Epic[]>("parse_epics", { path: m2kPath }),
@@ -64,11 +66,26 @@ export function useProjectLoader() {
 
   const registerProject = useCallback(async (path: string, name?: string): Promise<RegisteredProject | null> => {
     try {
-      // Check if path already exists
-      const exists = await invoke<boolean>("project_path_exists", { path });
-      if (exists) {
+      // Check if project already registered in DB
+      const existsInDb = await invoke<boolean>("project_path_exists", { path: `${path}/.m2k` });
+      if (existsInDb) {
         console.error("Project already registered");
         return null;
+      }
+
+      // Check if .m2k folder exists on filesystem, create if not
+      const m2kPath = `${path}/.m2k`;
+      const folderExists = await invoke<boolean>("path_exists", { path: m2kPath });
+      if (!folderExists) {
+        const shouldCreate = await confirm(
+          "No .m2k folder found in this project. Would you like to create the M2K project structure?",
+          { title: "Initialize M2K Project", kind: "info" }
+        );
+        if (!shouldCreate) {
+          return null;
+        }
+        console.log("Creating .m2k folder structure...");
+        await invoke<string>("init_m2k_folder", { projectPath: path });
       }
 
       // Extract folder name if no name provided
@@ -77,7 +94,7 @@ export function useProjectLoader() {
       // Add to database
       const project = await invoke<RegisteredProject>("add_project", {
         name: projectName,
-        path
+        path: m2kPath,
       });
 
       // Refresh projects list
@@ -92,15 +109,7 @@ export function useProjectLoader() {
 
   const switchToProject = useCallback(async (project: RegisteredProject): Promise<{ success: boolean; error?: string }> => {
     try {
-      // Validate project path exists
-      const isValid = await validateProjectPath(project.path);
-      if (!isValid) {
-        const errorMsg = `Project folder not found or missing .m2k: ${project.path}`;
-        console.error(errorMsg);
-        return { success: false, error: errorMsg };
-      }
-
-      // Update last accessed
+           // Update last accessed
       await invoke("update_project_last_accessed", { id: project.id });
 
       // Save active project to app state

@@ -76,7 +76,7 @@ ${ticketDetails || "No backlog tickets found."}
 
 Start with the first backlog ticket: ${backlogTickets[0]?.id || "No tickets available"}
 
-@${projectPath}/.m2k/epics/${epic.id}-${epic.title.replace(/[^a-zA-Z0-9\s-]/g, "").replace(/\s+/g, "-")}.md
+@${projectPath}/epics/${epic.id}-${epic.title.replace(/[^a-zA-Z0-9\s-]/g, "").replace(/\s+/g, "-")}.md
 `;
 
   return prompt;
