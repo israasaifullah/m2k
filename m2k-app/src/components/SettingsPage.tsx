@@ -5,6 +5,8 @@ import { Toast, useToast } from "./Toast";
 
 export function SettingsPage() {
   const setViewMode = useAppStore((s) => s.setViewMode);
+  const vimMode = useAppStore((s) => s.vimMode);
+  const setVimMode = useAppStore((s) => s.setVimMode);
   const [apiKey, setApiKey] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -179,6 +181,39 @@ export function SettingsPage() {
                   {maskedKey}
                 </p>
               )}
+            </div>
+          </div>
+
+          {/* Editor Settings */}
+          <div className="bg-[var(--geist-accents-1)] border border-[var(--geist-accents-2)] rounded-lg p-4">
+            <h2 className="text-base font-medium text-[var(--geist-foreground)] mb-4">
+              Editor Settings
+            </h2>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <label htmlFor="vim-toggle" className="text-sm font-medium text-[var(--geist-foreground)] block mb-1">
+                  Vim Mode
+                </label>
+                <p className="text-xs text-[var(--geist-accents-5)]">
+                  Enable vim keybindings in markdown editors
+                </p>
+              </div>
+              <button
+                id="vim-toggle"
+                onClick={() => setVimMode(!vimMode)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-2 focus:ring-offset-[var(--geist-background)] ${
+                  vimMode ? 'bg-[var(--geist-success)]' : 'bg-[var(--geist-accents-3)]'
+                }`}
+                role="switch"
+                aria-checked={vimMode}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    vimMode ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
             </div>
           </div>
 
