@@ -50,14 +50,17 @@ export function MarkdownEditor({ value, onChange, readOnly = false }: Props) {
   const vimModeRef = useRef<VimMode | null>(null);
   const statusBarRef = useRef<HTMLDivElement | null>(null);
   const vimEnabled = useAppStore((s) => s.vimMode);
+  const [editorReady, setEditorReady] = useState(false);
 
   const handleEditorMount = (editor: editor.IStandaloneCodeEditor) => {
     editorRef.current = editor;
     editor.focus();
+    // Delay to ensure status bar is rendered
+    setTimeout(() => setEditorReady(true), 0);
   };
 
   useEffect(() => {
-    if (!editorRef.current || !statusBarRef.current) return;
+    if (!editorReady || !editorRef.current || !statusBarRef.current) return;
 
     if (vimEnabled && !readOnly) {
       vimModeRef.current = initVimMode(editorRef.current, statusBarRef.current);
@@ -72,7 +75,7 @@ export function MarkdownEditor({ value, onChange, readOnly = false }: Props) {
         vimModeRef.current = null;
       }
     };
-  }, [vimEnabled, readOnly]);
+  }, [editorReady, vimEnabled, readOnly]);
 
   const handleChange = (newValue: string | undefined) => {
     if (newValue !== undefined) {
