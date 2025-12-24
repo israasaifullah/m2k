@@ -69,11 +69,11 @@ export function StatsPill({
       />
       <div className="flex flex-col min-w-0">
         <span className={`${textSizes[size].label} text-[var(--geist-accents-5)] truncate`}>
-          {label}
+          {label} {value}
         </span>
-        <span className={`${textSizes[size].value} font-semibold text-[var(--geist-foreground)] truncate`}>
+        {/* <span className={`${textSizes[size].value} font-semibold text-[var(--geist-foreground)] truncate`}>
           {value}
-        </span>
+        </span> */}
       </div>
     </div>
   );

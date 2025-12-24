@@ -1,6 +1,7 @@
 import "./App.css";
 import { useEffect } from "react";
 import { Settings, FolderOpen, Plus, Sparkles } from "lucide-react";
+import { StatsBar } from "./components/StatsBar";
 import { KanbanBoard } from "./components/KanbanBoard";
 import { EpicFilter } from "./components/EpicFilter";
 import { StartEpicButton } from "./components/StartEpicButton";
@@ -69,8 +70,9 @@ function App() {
 
   return (
     <main className="h-screen flex flex-col bg-[var(--geist-background)] text-[var(--geist-foreground)]" role="main" aria-label="Kanban board application">
-      <header className="px-3 md:px-4 py-2 md:py-3 border-b border-[var(--geist-accents-2)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2" role="banner">
-        <h1 className="text-lg font-semibold">M2K</h1>
+      <header className="px-3 md:px-4 py-2 md:py-3 border-b border-[var(--geist-accents-2)]" role="banner">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <h1 className="text-lg font-semibold">M2K</h1>
         <nav className="flex items-center gap-2 md:gap-4 flex-wrap" aria-label="Main controls">
           {viewMode === "kanban" && (
             <>
@@ -111,6 +113,12 @@ function App() {
             <Settings size={14} aria-hidden="true" />
           </button>
         </nav>
+        </div>
+        {viewMode === "kanban" && (
+          <div className="mt-2 pt-2 border-t border-[var(--geist-accents-2)]">
+            <StatsBar />
+          </div>
+        )}
       </header>
       <div className="flex-1 min-h-0" role="region" aria-label={viewMode === "kanban" ? "Kanban board" : viewMode === "prd" ? "PRD editor" : viewMode === "smart" ? "Smart Mode" : "Settings"}>
         {viewMode === "kanban" && <KanbanBoard />}

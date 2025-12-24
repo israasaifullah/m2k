@@ -145,6 +145,55 @@ async fn validate_api_key(api_key: String) -> Result<bool, String> {
     claude::validate_api_key(&api_key).await
 }
 
+#[derive(Debug, Serialize)]
+pub struct ApiStatus {
+    pub configured: bool,
+    pub connected: bool,
+    pub error: Option<String>,
+}
+
+#[tauri::command]
+async fn check_api_status() -> Result<ApiStatus, String> {
+    let entry = Entry::new(KEYRING_SERVICE, KEYRING_USER)
+        .map_err(|e| format!("Failed to access keyring: {}", e))?;
+
+    let api_key = match entry.get_password() {
+        Ok(key) => key,
+        Err(keyring::Error::NoEntry) => {
+            return Ok(ApiStatus {
+                configured: false,
+                connected: false,
+                error: None,
+            });
+        }
+        Err(e) => {
+            return Ok(ApiStatus {
+                configured: false,
+                connected: false,
+                error: Some(format!("Keyring error: {}", e)),
+            });
+        }
+    };
+
+    match claude::validate_api_key(&api_key).await {
+        Ok(true) => Ok(ApiStatus {
+            configured: true,
+            connected: true,
+            error: None,
+        }),
+        Ok(false) => Ok(ApiStatus {
+            configured: true,
+            connected: false,
+            error: Some("Invalid API key".to_string()),
+        }),
+        Err(e) => Ok(ApiStatus {
+            configured: true,
+            connected: false,
+            error: Some(e),
+        }),
+    }
+}
+
 #[tauri::command]
 fn parse_tickets(path: String) -> Result<Vec<Ticket>, String> {
     parser::parse_tickets(&path)
@@ -378,6 +427,7 @@ pub fn run() {
             delete_api_key,
             has_api_key,
             validate_api_key,
+            check_api_status,
             parse_tickets,
             parse_epics,
             start_watcher,
