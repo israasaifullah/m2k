@@ -64,6 +64,39 @@ fn start_watcher(app: AppHandle, path: String) -> Result<(), String> {
     watcher::start_watcher(app, path)
 }
 
+#[tauri::command]
+fn save_markdown_file(path: String, content: String) -> Result<(), String> {
+    fs::write(&path, content).map_err(|e| format!("Failed to write file: {}", e))
+}
+
+#[tauri::command]
+fn get_next_epic_id(project_path: String) -> Result<u32, String> {
+    let epics = parser::parse_epics(&project_path)?;
+    let max_id = epics
+        .iter()
+        .filter_map(|e| {
+            e.id.strip_prefix("EPIC-")
+                .and_then(|s| s.parse::<u32>().ok())
+        })
+        .max()
+        .unwrap_or(0);
+    Ok(max_id + 1)
+}
+
+#[tauri::command]
+fn get_next_ticket_id(project_path: String) -> Result<u32, String> {
+    let tickets = parser::parse_tickets(&project_path)?;
+    let max_id = tickets
+        .iter()
+        .filter_map(|t| {
+            t.id.strip_prefix("T-")
+                .and_then(|s| s.parse::<u32>().ok())
+        })
+        .max()
+        .unwrap_or(0);
+    Ok(max_id + 1)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -74,7 +107,10 @@ pub fn run() {
             save_config,
             parse_tickets,
             parse_epics,
-            start_watcher
+            start_watcher,
+            save_markdown_file,
+            get_next_epic_id,
+            get_next_ticket_id
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
