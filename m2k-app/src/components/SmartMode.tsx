@@ -1,5 +1,8 @@
-import { useAppStore } from "../lib/store";
+import { useAppStore, type GeneratedEpic, type GeneratedTicket } from "../lib/store";
 import { Toast, useToast } from "./Toast";
+import { MarkdownEditor } from "./MarkdownEditor";
+import { invoke } from "@tauri-apps/api/core";
+import { useState } from "react";
 
 function BestPracticeTips() {
   return (
@@ -34,7 +37,6 @@ function ScopeWarning({ requirements }: { requirements: string }) {
   const wordCount = requirements.trim().split(/\s+/).filter(Boolean).length;
   const lineCount = requirements.trim().split(/\n/).filter(Boolean).length;
 
-  // Heuristics for scope detection
   const scopeIndicators = [
     /\band\b/gi,
     /\bwith\b/gi,
@@ -73,10 +75,160 @@ function ScopeWarning({ requirements }: { requirements: string }) {
   );
 }
 
+function generateEpicMarkdown(epic: GeneratedEpic): string {
+  const ticketRows = epic.tickets
+    .map(t => `| ${t.id} | ${t.title} | backlog |`)
+    .join('\n');
+
+  return `# ${epic.id}: ${epic.title}
+
+## Scope
+${epic.scope}
+
+## Tickets
+
+| ID | Description | Status |
+|----|-------------|--------|
+${ticketRows}
+`;
+}
+
+function generateTicketMarkdown(ticket: GeneratedTicket, epicId: string): string {
+  const criteriaList = ticket.criteria.map(c => `- ${c}`).join('\n');
+
+  return `# ${ticket.id}: ${ticket.title}
+
+**Epic:** ${epicId}
+
+## Description
+${ticket.description}
+
+## Acceptance Criteria
+${criteriaList}
+
+## Technical Notes
+${ticket.technicalNotes}
+
+## Dependencies
+${ticket.dependencies}
+
+## Testing
+${ticket.testing}
+`;
+}
+
+interface PreviewFile {
+  name: string;
+  path: string;
+  content: string;
+  type: 'epic' | 'ticket';
+}
+
+function PreviewMode({
+  epic,
+  onBack,
+  onSave,
+  saving,
+}: {
+  epic: GeneratedEpic;
+  onBack: () => void;
+  onSave: (files: PreviewFile[]) => void;
+  saving: boolean;
+}) {
+  const projectPath = useAppStore((s) => s.projectPath);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [files, setFiles] = useState<PreviewFile[]>(() => {
+    const epicFile: PreviewFile = {
+      name: `${epic.id}-${epic.title.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-')}.md`,
+      path: `${projectPath}/project-management/epics/${epic.id}-${epic.title.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '-')}.md`,
+      content: generateEpicMarkdown(epic),
+      type: 'epic',
+    };
+
+    const ticketFiles: PreviewFile[] = epic.tickets.map(ticket => ({
+      name: `${ticket.id}.md`,
+      path: `${projectPath}/project-management/backlog/${ticket.id}.md`,
+      content: generateTicketMarkdown(ticket, epic.id),
+      type: 'ticket',
+    }));
+
+    return [epicFile, ...ticketFiles];
+  });
+
+  const handleContentChange = (content: string) => {
+    setFiles(prev => prev.map((f, i) => i === selectedIndex ? { ...f, content } : f));
+  };
+
+  const selectedFile = files[selectedIndex];
+
+  return (
+    <div className="h-full flex flex-col">
+      <div className="px-4 py-3 border-b border-[var(--geist-accents-2)] flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-medium text-[var(--geist-foreground)]">
+            Preview & Edit
+          </span>
+          <span className="text-xs text-[var(--geist-accents-5)]">
+            {files.length} files to create
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onBack}
+            disabled={saving}
+            className="px-3 py-1.5 text-sm border border-[var(--geist-accents-3)] rounded-md hover:bg-[var(--geist-accents-1)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50"
+          >
+            Back
+          </button>
+          <button
+            onClick={() => onSave(files)}
+            disabled={saving}
+            className="px-3 py-1.5 text-sm bg-[var(--geist-success)] text-white rounded-md hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50"
+          >
+            {saving ? "Saving..." : "Save All"}
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 min-h-0 flex">
+        {/* File list sidebar */}
+        <div className="w-48 border-r border-[var(--geist-accents-2)] overflow-auto">
+          {files.map((file, index) => (
+            <button
+              key={file.name}
+              onClick={() => setSelectedIndex(index)}
+              className={`w-full px-3 py-2 text-left text-sm truncate transition-colors ${
+                index === selectedIndex
+                  ? 'bg-[var(--geist-accents-2)] text-[var(--geist-foreground)]'
+                  : 'hover:bg-[var(--geist-accents-1)] text-[var(--geist-accents-5)]'
+              }`}
+            >
+              <span className={`inline-block w-2 h-2 rounded-full mr-2 ${
+                file.type === 'epic' ? 'bg-purple-500' : 'bg-blue-500'
+              }`} />
+              {file.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Editor */}
+        <div className="flex-1 min-w-0 p-4">
+          <MarkdownEditor
+            value={selectedFile?.content || ''}
+            onChange={handleContentChange}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SmartMode() {
   const smartModeState = useAppStore((s) => s.smartModeState);
   const setSmartModeState = useAppStore((s) => s.setSmartModeState);
   const setViewMode = useAppStore((s) => s.setViewMode);
+  const projectPath = useAppStore((s) => s.projectPath);
+  const [saving, setSaving] = useState(false);
   const { toast, showToast, hideToast } = useToast();
 
   const handleCancel = () => {
@@ -89,17 +241,78 @@ export function SmartMode() {
       return;
     }
 
+    if (!projectPath) {
+      showToast("No project selected", "error");
+      return;
+    }
+
     setSmartModeState({ phase: "generating", error: null });
 
-    // TODO: Implement Claude API integration (T-037)
-    showToast("AI generation not yet implemented", "error");
+    try {
+      const result = await invoke<GeneratedEpic>("generate_epic", {
+        projectPath,
+        requirements: smartModeState.requirements,
+      });
+
+      setSmartModeState({
+        phase: "preview",
+        generatedEpic: result,
+      });
+      showToast("Epic generated successfully!", "success");
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setSmartModeState({ phase: "input", error: errMsg });
+      showToast(errMsg, "error");
+    }
+  };
+
+  const handleBack = () => {
     setSmartModeState({ phase: "input" });
+  };
+
+  const handleSave = async (files: PreviewFile[]) => {
+    setSaving(true);
+
+    try {
+      for (const file of files) {
+        await invoke("save_markdown_file", {
+          path: file.path,
+          content: file.content,
+        });
+      }
+
+      showToast(`Created ${files.length} files successfully!`, "success");
+      setTimeout(() => setViewMode("kanban"), 1000);
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      showToast(errMsg, "error");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleRequirementsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setSmartModeState({ requirements: e.target.value });
   };
 
+  // Preview phase
+  if (smartModeState.phase === "preview" && smartModeState.generatedEpic) {
+    return (
+      <>
+        <PreviewMode
+          epic={smartModeState.generatedEpic}
+          onBack={handleBack}
+          onSave={handleSave}
+          saving={saving}
+        />
+        {toast && (
+          <Toast message={toast.message} type={toast.type} onClose={hideToast} />
+        )}
+      </>
+    );
+  }
+
+  // Input phase
   return (
     <div className="h-full flex flex-col animate-fade-in">
       <div className="px-4 py-3 border-b border-[var(--geist-accents-2)] flex items-center justify-between gap-4 flex-wrap">
@@ -107,7 +320,7 @@ export function SmartMode() {
           <span className="text-sm font-medium text-[var(--geist-foreground)]">
             Smart Mode
           </span>
-          <span className="text-xs px-2 py-0.5 rounded bg-[var(--geist-success)] text-white">
+          <span className="text-xs px-2 py-0.5 rounded bg-gradient-to-r from-purple-500 to-blue-500 text-white">
             AI-Powered
           </span>
         </div>

@@ -1,6 +1,8 @@
+mod claude;
 mod parser;
 mod watcher;
 
+use claude::GeneratedEpic;
 use parser::{Epic, Ticket};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -102,6 +104,16 @@ fn get_next_ticket_id(project_path: String) -> Result<u32, String> {
     Ok(max_id + 1)
 }
 
+#[tauri::command]
+async fn generate_epic(
+    project_path: String,
+    requirements: String,
+) -> Result<GeneratedEpic, String> {
+    let next_epic_id = get_next_epic_id(project_path.clone())?;
+    let next_ticket_id = get_next_ticket_id(project_path)?;
+    claude::generate_epic_and_tickets(requirements, next_epic_id, next_ticket_id).await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -116,7 +128,8 @@ pub fn run() {
             save_markdown_file,
             read_markdown_file,
             get_next_epic_id,
-            get_next_ticket_id
+            get_next_ticket_id,
+            generate_epic
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

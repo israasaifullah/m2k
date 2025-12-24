@@ -7,11 +7,11 @@ AI-powered EPIC and ticket generation from rough requirements. Includes best pra
 
 | ID | Description | Status |
 |----|-------------|--------|
-| T-036 | Build Smart Mode UI with requirements input | backlog |
-| T-037 | Integrate Claude API for EPIC/ticket generation | backlog |
-| T-038 | Implement prompt engineering for quality output | backlog |
-| T-039 | Add scope validation and warning system | backlog |
-| T-040 | Generate EPIC markdown from AI response | backlog |
-| T-041 | Generate ticket files from AI response | backlog |
-| T-042 | Add preview and edit before save | backlog |
-| T-043 | Display best practice tips in UI | backlog |
+| T-036 | Build Smart Mode UI with requirements input | done |
+| T-037 | Integrate Claude API for EPIC/ticket generation | done |
+| T-038 | Implement prompt engineering for quality output | done |
+| T-039 | Add scope validation and warning system | done |
+| T-040 | Generate EPIC markdown from AI response | done |
+| T-041 | Generate ticket files from AI response | done |
+| T-042 | Add preview and edit before save | done |
+| T-043 | Display best practice tips in UI | done |
