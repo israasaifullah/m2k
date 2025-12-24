@@ -1,6 +1,8 @@
 import { useAppStore, type PrdDocType } from "../lib/store";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { EPIC_TEMPLATE, TICKET_TEMPLATE } from "../lib/templates";
+import { validateEpic, validateTicket } from "../lib/validation";
+import { Toast, useToast } from "./Toast";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -76,6 +78,7 @@ export function PRDMode() {
   const [selectedEpic, setSelectedEpic] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { toast, showToast, hideToast } = useToast();
 
   const handleDocTypeChange = (docType: PrdDocType) => {
     const content = docType === "epic" ? EPIC_TEMPLATE : TICKET_TEMPLATE;
@@ -96,6 +99,18 @@ export function PRDMode() {
   const handleSave = async () => {
     if (!projectPath) return;
 
+    // Validate content
+    const validation =
+      prdState.docType === "epic"
+        ? validateEpic(prdState.content)
+        : validateTicket(prdState.content);
+
+    if (!validation.valid && prdState.mode === "edit") {
+      setError(validation.errors[0]);
+      showToast(validation.errors[0], "error");
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
@@ -105,20 +120,24 @@ export function PRDMode() {
           path: prdState.editingPath,
           content: prdState.content,
         });
+        showToast("File saved successfully", "success");
       } else if (prdState.docType === "epic") {
         const nextId = await invoke<number>("get_next_epic_id", {
           projectPath,
         });
         const paddedId = nextId.toString().padStart(3, "0");
-        const titleMatch = prdState.content.match(/^# EPIC-\d+: (.+)$/m);
+        const titleMatch = prdState.content.match(/^# EPIC-[\d{}\w]+: (.+)$/m);
         const title = titleMatch?.[1]?.trim() || "Untitled";
-        const safeName = title.replace(/[^a-zA-Z0-9-]/g, "-");
+        const safeName = title
+          .replace(/[^a-zA-Z0-9\s-]/g, "")
+          .replace(/\s+/g, "-");
         const filePath = `${projectPath}/project-management/epics/EPIC-${paddedId}-${safeName}.md`;
         const content = prdState.content.replace(
           /EPIC-\{ID\}/g,
           `EPIC-${paddedId}`
         );
         await invoke("save_markdown_file", { path: filePath, content });
+        showToast(`Epic EPIC-${paddedId} created`, "success");
       } else {
         if (!selectedEpic) {
           setError("Please select an epic for this ticket");
@@ -135,13 +154,19 @@ export function PRDMode() {
           .replace(/EPIC-\{EPIC_ID\}/g, selectedEpic)
           .replace(/\*\*Epic:\*\* EPIC-\d+/, `**Epic:** ${selectedEpic}`);
         if (content.includes("**Epic:** EPIC-{EPIC_ID}")) {
-          content = content.replace("**Epic:** EPIC-{EPIC_ID}", `**Epic:** ${selectedEpic}`);
+          content = content.replace(
+            "**Epic:** EPIC-{EPIC_ID}",
+            `**Epic:** ${selectedEpic}`
+          );
         }
         await invoke("save_markdown_file", { path: filePath, content });
+        showToast(`Ticket T-${paddedId} created`, "success");
       }
-      setViewMode("kanban");
+      setTimeout(() => setViewMode("kanban"), 1000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      const errMsg = err instanceof Error ? err.message : String(err);
+      setError(errMsg);
+      showToast(errMsg, "error");
     } finally {
       setSaving(false);
     }
@@ -199,6 +224,9 @@ export function PRDMode() {
           onChange={handleContentChange}
         />
       </div>
+      {toast && (
+        <Toast message={toast.message} type={toast.type} onClose={hideToast} />
+      )}
     </div>
   );
 }
