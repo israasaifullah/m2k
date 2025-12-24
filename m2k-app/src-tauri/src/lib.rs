@@ -1,3 +1,6 @@
+mod parser;
+
+use parser::{Epic, Ticket};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
@@ -23,11 +26,10 @@ fn load_config() -> Result<AppConfig, String> {
         });
     }
 
-    let content = fs::read_to_string(&config_path)
-        .map_err(|e| format!("Failed to read config: {}", e))?;
+    let content =
+        fs::read_to_string(&config_path).map_err(|e| format!("Failed to read config: {}", e))?;
 
-    serde_json::from_str(&content)
-        .map_err(|e| format!("Failed to parse config: {}", e))
+    serde_json::from_str(&content).map_err(|e| format!("Failed to parse config: {}", e))
 }
 
 #[tauri::command]
@@ -42,15 +44,29 @@ fn save_config(config: AppConfig) -> Result<(), String> {
     let content = serde_json::to_string_pretty(&config)
         .map_err(|e| format!("Failed to serialize config: {}", e))?;
 
-    fs::write(&config_path, content)
-        .map_err(|e| format!("Failed to write config: {}", e))
+    fs::write(&config_path, content).map_err(|e| format!("Failed to write config: {}", e))
+}
+
+#[tauri::command]
+fn parse_tickets(path: String) -> Result<Vec<Ticket>, String> {
+    parser::parse_tickets(&path)
+}
+
+#[tauri::command]
+fn parse_epics(path: String) -> Result<Vec<Epic>, String> {
+    parser::parse_epics(&path)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![load_config, save_config])
+        .invoke_handler(tauri::generate_handler![
+            load_config,
+            save_config,
+            parse_tickets,
+            parse_epics
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
