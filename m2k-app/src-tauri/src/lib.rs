@@ -98,6 +98,11 @@ fn has_api_key() -> Result<bool, String> {
 }
 
 #[tauri::command]
+async fn validate_api_key(api_key: String) -> Result<bool, String> {
+    claude::validate_api_key(&api_key).await
+}
+
+#[tauri::command]
 fn parse_tickets(path: String) -> Result<Vec<Ticket>, String> {
     parser::parse_tickets(&path)
 }
@@ -172,6 +177,7 @@ pub fn run() {
             load_api_key,
             delete_api_key,
             has_api_key,
+            validate_api_key,
             parse_tickets,
             parse_epics,
             start_watcher,

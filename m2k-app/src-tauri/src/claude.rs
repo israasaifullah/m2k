@@ -63,6 +63,44 @@ pub struct GeneratedEpic {
     pub tickets: Vec<GeneratedTicket>,
 }
 
+pub async fn validate_api_key(api_key: &str) -> Result<bool, String> {
+    let client = Client::new();
+
+    let request = ClaudeRequest {
+        model: CLAUDE_MODEL.to_string(),
+        max_tokens: 1,
+        system: "Reply with 'ok'.".to_string(),
+        messages: vec![ClaudeMessage {
+            role: "user".to_string(),
+            content: "test".to_string(),
+        }],
+    };
+
+    let response = client
+        .post(CLAUDE_API_URL)
+        .header("x-api-key", api_key)
+        .header("anthropic-version", "2023-06-01")
+        .header("content-type", "application/json")
+        .json(&request)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to connect: {}", e))?;
+
+    let status = response.status();
+    if status.is_success() {
+        Ok(true)
+    } else if status.as_u16() == 401 {
+        Err("Invalid API key".to_string())
+    } else {
+        let body = response.text().await.unwrap_or_default();
+        if let Ok(error) = serde_json::from_str::<ClaudeError>(&body) {
+            Err(error.error.message)
+        } else {
+            Err(format!("API error ({})", status))
+        }
+    }
+}
+
 fn get_api_key() -> Result<String, String> {
     // Try keyring first
     if let Ok(entry) = Entry::new(KEYRING_SERVICE, KEYRING_USER) {

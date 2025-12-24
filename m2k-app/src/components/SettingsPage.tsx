@@ -36,10 +36,20 @@ export function SettingsPage() {
       return;
     }
 
+    // Basic format validation
+    if (!apiKey.trim().startsWith("sk-ant-")) {
+      showToast("Invalid key format. Key should start with 'sk-ant-'", "error");
+      return;
+    }
+
     setSaving(true);
     try {
+      // Validate with Anthropic API
+      await invoke("validate_api_key", { apiKey: apiKey.trim() });
+
+      // Save if valid
       await invoke("save_api_key", { apiKey: apiKey.trim() });
-      showToast("API key saved successfully!", "success");
+      showToast("API key validated and saved!", "success");
       setHasExistingKey(true);
       setApiKey("");
       setTimeout(() => setViewMode("kanban"), 1000);
@@ -97,7 +107,7 @@ export function SettingsPage() {
             disabled={saving || !apiKey.trim()}
             className="px-3 py-1.5 text-sm bg-[var(--geist-success)] text-white rounded-md hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50"
           >
-            {saving ? "Saving..." : "Save"}
+            {saving ? "Validating..." : "Save"}
           </button>
         </div>
       </div>
