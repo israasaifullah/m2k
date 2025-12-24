@@ -120,10 +120,10 @@ export function MarkdownEditor({ value, onChange, readOnly = false }: Props) {
           }}
         />
       </div>
-      {vimEnabled && !readOnly && (
+      {!readOnly && (
         <div
           ref={statusBarRef}
-          className="h-6 px-3 flex items-center bg-[var(--geist-accents-1)] border-t border-[var(--geist-accents-2)] text-xs font-mono text-[var(--geist-accents-5)]"
+          className={`h-6 px-3 flex items-center bg-[var(--geist-accents-1)] border-t border-[var(--geist-accents-2)] text-xs font-mono text-[var(--geist-accents-5)] ${vimEnabled ? '' : 'hidden'}`}
           aria-label="Vim status bar"
         />
       )}
