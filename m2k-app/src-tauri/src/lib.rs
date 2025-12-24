@@ -1,9 +1,11 @@
 mod parser;
+mod watcher;
 
 use parser::{Epic, Ticket};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+use tauri::AppHandle;
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct AppConfig {
@@ -57,15 +59,22 @@ fn parse_epics(path: String) -> Result<Vec<Epic>, String> {
     parser::parse_epics(&path)
 }
 
+#[tauri::command]
+fn start_watcher(app: AppHandle, path: String) -> Result<(), String> {
+    watcher::start_watcher(app, path)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             load_config,
             save_config,
             parse_tickets,
-            parse_epics
+            parse_epics,
+            start_watcher
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
