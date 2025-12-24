@@ -124,7 +124,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   prdState: { ...defaultPrdState },
   smartModeState: { ...defaultSmartModeState },
   executionState: { ...defaultExecutionState },
-  vimMode: false,
+  vimMode: true,
   registeredProjects: [],
   activeProjectId: null,
   sidebarCollapsed: false,

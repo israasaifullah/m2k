@@ -123,7 +123,6 @@ function FilePreview({ path }: FilePreviewProps) {
 
   useEffect(() => {
     loadFile();
-    setEditing(false);
     setHasChanges(false);
   }, [path]);
 
@@ -134,9 +133,13 @@ function FilePreview({ path }: FilePreviewProps) {
       const fileContent = await invoke<string>("read_markdown_file", { path });
       setContent(fileContent);
       setEditContent(fileContent);
+      const ext = path.split('.').pop()?.toLowerCase();
+      const isMarkdown = ['md', 'markdown'].includes(ext || '');
+      setEditing(isMarkdown);
     } catch (err) {
       setError(String(err));
       setContent(null);
+      setEditing(false);
     } finally {
       setLoading(false);
     }
