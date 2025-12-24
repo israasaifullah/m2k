@@ -1,5 +1,7 @@
 import { useState } from "react";
 import type { Ticket } from "../types";
+import { useAppStore } from "../lib/store";
+import { invoke } from "@tauri-apps/api/core";
 
 interface Props {
   ticket: Ticket;
@@ -14,6 +16,7 @@ const epicColors: Record<string, string> = {
   "EPIC-006": "bg-cyan-600",
   "EPIC-007": "bg-rose-600",
   "EPIC-008": "bg-amber-600",
+  "EPIC-009": "bg-teal-600",
 };
 
 function PulsingDot() {
@@ -27,6 +30,8 @@ function PulsingDot() {
 
 export function TicketCard({ ticket }: Props) {
   const [expanded, setExpanded] = useState(false);
+  const setPrdState = useAppStore((s) => s.setPrdState);
+  const setViewMode = useAppStore((s) => s.setViewMode);
   const epicColor = epicColors[ticket.epic] || "bg-[var(--geist-accents-4)]";
   const isInProgress = ticket.status === "in_progress";
 
@@ -35,6 +40,24 @@ export function TicketCard({ ticket }: Props) {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       toggle();
+    }
+  };
+
+  const handleEdit = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const content = await invoke<string>("read_markdown_file", {
+        path: ticket.filePath,
+      });
+      setPrdState({
+        mode: "edit",
+        docType: "ticket",
+        content,
+        editingPath: ticket.filePath,
+      });
+      setViewMode("prd");
+    } catch (err) {
+      console.error("Failed to read ticket:", err);
     }
   };
 
@@ -66,8 +89,15 @@ export function TicketCard({ ticket }: Props) {
         <span className="text-xs text-[var(--geist-accents-5)] font-mono">
           {ticket.id}
         </span>
+        <button
+          onClick={handleEdit}
+          className="ml-auto text-xs text-[var(--geist-accents-5)] hover:text-[var(--geist-foreground)] transition-colors px-1.5 py-0.5 rounded hover:bg-[var(--geist-accents-2)] focus:outline-none focus:ring-1 focus:ring-[var(--geist-success)]"
+          aria-label={`Edit ${ticket.id}`}
+        >
+          Edit
+        </button>
         {isInProgress && (
-          <span className="ml-auto text-xs text-[var(--geist-success)] font-medium animate-pulse" aria-hidden="true">
+          <span className="text-xs text-[var(--geist-success)] font-medium animate-pulse" aria-hidden="true">
             Working...
           </span>
         )}

@@ -70,6 +70,11 @@ fn save_markdown_file(path: String, content: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn read_markdown_file(path: String) -> Result<String, String> {
+    fs::read_to_string(&path).map_err(|e| format!("Failed to read file: {}", e))
+}
+
+#[tauri::command]
 fn get_next_epic_id(project_path: String) -> Result<u32, String> {
     let epics = parser::parse_epics(&project_path)?;
     let max_id = epics
@@ -109,6 +114,7 @@ pub fn run() {
             parse_epics,
             start_watcher,
             save_markdown_file,
+            read_markdown_file,
             get_next_epic_id,
             get_next_ticket_id
         ])
