@@ -251,6 +251,109 @@ async fn is_claude_cli_running() -> Result<bool, String> {
 }
 
 #[tauri::command]
+fn move_ticket_to_status(
+    project_path: String,
+    ticket_id: String,
+    new_status: String,
+) -> Result<(), String> {
+    let project_dir = PathBuf::from(&project_path).join("project-management");
+
+    // Find the current ticket file
+    let folders = ["backlog", "inprogress", "done"];
+    let mut source_path: Option<PathBuf> = None;
+
+    for folder in &folders {
+        let path = project_dir.join(folder).join(format!("{}.md", ticket_id));
+        if path.exists() {
+            source_path = Some(path);
+            break;
+        }
+    }
+
+    let source = source_path.ok_or(format!("Ticket {} not found", ticket_id))?;
+
+    // Determine target folder
+    let target_folder = match new_status.as_str() {
+        "backlog" => "backlog",
+        "in_progress" => "inprogress",
+        "done" => "done",
+        _ => return Err(format!("Invalid status: {}", new_status)),
+    };
+
+    let target = project_dir
+        .join(target_folder)
+        .join(format!("{}.md", ticket_id));
+
+    // Move the file
+    if source != target {
+        fs::rename(&source, &target).map_err(|e| format!("Failed to move ticket: {}", e))?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+fn update_epic_ticket_status(
+    project_path: String,
+    epic_id: String,
+    ticket_id: String,
+    new_status: String,
+) -> Result<(), String> {
+    let epics_dir = PathBuf::from(&project_path)
+        .join("project-management")
+        .join("epics");
+
+    // Find the epic file
+    let entries = fs::read_dir(&epics_dir)
+        .map_err(|e| format!("Failed to read epics directory: {}", e))?;
+
+    let mut epic_path: Option<PathBuf> = None;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+            if name.starts_with(&epic_id) && name.ends_with(".md") {
+                epic_path = Some(path);
+                break;
+            }
+        }
+    }
+
+    let epic_file = epic_path.ok_or(format!("Epic {} not found", epic_id))?;
+
+    // Read and update the epic content
+    let content = fs::read_to_string(&epic_file)
+        .map_err(|e| format!("Failed to read epic file: {}", e))?;
+
+    // Update the ticket status in the markdown table
+    let updated = content
+        .lines()
+        .map(|line| {
+            if line.contains(&ticket_id) && line.starts_with('|') {
+                // Parse the table row and update status
+                let parts: Vec<&str> = line.split('|').collect();
+                if parts.len() >= 4 {
+                    format!(
+                        "| {} | {} | {} |",
+                        parts[1].trim(),
+                        parts[2].trim(),
+                        new_status
+                    )
+                } else {
+                    line.to_string()
+                }
+            } else {
+                line.to_string()
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    fs::write(&epic_file, updated).map_err(|e| format!("Failed to write epic file: {}", e))?;
+
+    Ok(())
+}
+
+#[tauri::command]
 async fn generate_epic(
     project_path: String,
     requirements: String,
@@ -285,7 +388,9 @@ pub fn run() {
             get_claude_cli_version,
             start_claude_cli,
             stop_claude_cli,
-            is_claude_cli_running
+            is_claude_cli_running,
+            move_ticket_to_status,
+            update_epic_ticket_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
