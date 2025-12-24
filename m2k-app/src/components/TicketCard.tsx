@@ -30,15 +30,16 @@ export function TicketCard({ ticket }: Props) {
   const epicColor = epicColors[ticket.epic] || "bg-[var(--geist-accents-4)]";
   const isInProgress = ticket.status === "in_progress";
 
+  const baseClass = "rounded-lg p-3 cursor-pointer transition-all duration-200 ease-out animate-fade-in hover:scale-[1.01] hover:shadow-lg";
   const cardClass = isInProgress
-    ? "bg-[var(--geist-accents-1)] rounded-lg p-3 cursor-pointer hover:bg-[var(--geist-accents-2)] transition-all border border-[var(--geist-success)] animate-pulse-subtle"
-    : "bg-[var(--geist-background)] rounded-lg p-3 cursor-pointer hover:bg-[var(--geist-accents-1)] transition-colors border border-[var(--geist-accents-2)]";
+    ? `${baseClass} bg-[var(--geist-accents-1)] hover:bg-[var(--geist-accents-2)] border border-[var(--geist-success)] animate-pulse-subtle`
+    : `${baseClass} bg-[var(--geist-background)] hover:bg-[var(--geist-accents-1)] border border-[var(--geist-accents-2)]`;
 
   return (
     <div className={cardClass} onClick={() => setExpanded(!expanded)}>
       <div className="flex items-center gap-2 flex-wrap">
         {isInProgress && <PulsingDot />}
-        <span className={`${epicColor} text-white text-xs px-1.5 py-0.5 rounded font-medium`}>
+        <span className={`${epicColor} text-white text-xs px-1.5 py-0.5 rounded font-medium transition-transform hover:scale-105`}>
           {ticket.epic}
         </span>
         <span className="text-xs text-[var(--geist-accents-5)] font-mono">
@@ -52,7 +53,7 @@ export function TicketCard({ ticket }: Props) {
       </div>
       <h3 className="font-medium mt-2 text-sm">{ticket.title}</h3>
       {expanded && ticket.description && (
-        <p className="text-xs text-[var(--geist-accents-5)] mt-2">
+        <p className="text-xs text-[var(--geist-accents-5)] mt-2 animate-slide-up">
           {ticket.description}
         </p>
       )}
