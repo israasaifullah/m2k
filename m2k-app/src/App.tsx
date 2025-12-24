@@ -10,17 +10,17 @@ function App() {
 
   if (!projectPath) {
     return (
-      <main className="h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <main className="h-screen flex items-center justify-center bg-[var(--geist-background)]">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
-            M2K - Markdown to Kanban
+          <h1 className="text-3xl font-semibold mb-4 text-[var(--geist-foreground)]">
+            M2K
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
+          <p className="text-[var(--geist-accents-5)] mb-8">
             Select a project folder to get started
           </p>
           <button
             onClick={selectFolder}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-6 py-2.5 bg-[var(--geist-foreground)] text-[var(--geist-background)] rounded-lg font-medium hover:opacity-90 transition-opacity"
           >
             Select Folder
           </button>
@@ -30,14 +30,14 @@ function App() {
   }
 
   return (
-    <main className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white">
-      <header className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-        <h1 className="text-xl font-bold">M2K</h1>
+    <main className="h-screen flex flex-col bg-[var(--geist-background)] text-[var(--geist-foreground)]">
+      <header className="px-4 py-3 border-b border-[var(--geist-accents-2)] flex items-center justify-between">
+        <h1 className="text-lg font-semibold">M2K</h1>
         <div className="flex items-center gap-4">
           <EpicFilter />
           <button
             onClick={selectFolder}
-            className="px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+            className="px-3 py-1.5 text-sm border border-[var(--geist-accents-3)] rounded-md hover:bg-[var(--geist-accents-1)] transition-colors"
           >
             Change Folder
           </button>

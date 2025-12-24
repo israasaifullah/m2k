@@ -7,11 +7,11 @@ export function EpicFilter() {
 
   return (
     <div className="flex items-center gap-2">
-      <label className="text-sm font-medium">Filter by Epic:</label>
+      <span className="text-sm text-[var(--geist-accents-5)]">Epic:</span>
       <select
         value={selectedEpic || ""}
         onChange={(e) => setSelectedEpic(e.target.value || null)}
-        className="px-3 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm"
+        className="px-3 py-1.5 text-sm bg-[var(--geist-accents-1)] border border-[var(--geist-accents-3)] rounded-md text-[var(--geist-foreground)] focus:border-[var(--geist-accents-5)] focus:outline-none transition-colors"
       >
         <option value="">All</option>
         {epics.map((epic) => (

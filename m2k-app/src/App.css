@@ -1,17 +1,39 @@
 @import "tailwindcss";
 
 :root {
-  font-family: Inter, system-ui, sans-serif;
+  font-family: "Geist Sans", system-ui, sans-serif;
+  --geist-background: #000;
+  --geist-foreground: #fff;
+  --geist-accents-1: #111;
+  --geist-accents-2: #333;
+  --geist-accents-3: #444;
+  --geist-accents-4: #666;
+  --geist-accents-5: #888;
+  --geist-accents-6: #999;
+  --geist-accents-7: #eaeaea;
+  --geist-accents-8: #fafafa;
+  --geist-success: #0070f3;
+  --geist-error: #e00;
+  --geist-warning: #f5a623;
+}
+
+body {
+  background: var(--geist-background);
+  color: var(--geist-foreground);
+}
+
+code, pre, .font-mono {
+  font-family: "Geist Mono", monospace;
 }
 
 @keyframes pulse-subtle {
   0%, 100% {
     opacity: 1;
-    box-shadow: 0 0 8px rgba(34, 211, 238, 0.4);
+    box-shadow: 0 0 8px rgba(0, 112, 243, 0.4);
   }
   50% {
     opacity: 0.95;
-    box-shadow: 0 0 20px rgba(34, 211, 238, 0.6);
+    box-shadow: 0 0 20px rgba(0, 112, 243, 0.6);
   }
 }
 
