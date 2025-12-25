@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Pencil, ChevronDown, ChevronRight, Copy, Check } from "lucide-react";
+import { Pencil, ChevronDown, ChevronRight, Copy, Check, X } from "lucide-react";
 import type { Ticket } from "../types";
 import { useAppStore } from "../lib/store";
 import { invoke } from "@tauri-apps/api/core";
+import { confirm } from "@tauri-apps/plugin-dialog";
 
 interface Props {
   ticket: Ticket;
@@ -79,6 +80,21 @@ export function TicketCard({ ticket }: Props) {
     }
   };
 
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const confirmed = await confirm(
+      `Are you sure you want to delete ticket ${ticket.id}?`,
+      { title: "Delete Ticket", kind: "warning" }
+    );
+    if (confirmed) {
+      try {
+        await invoke("delete_markdown_file", { path: ticket.filePath });
+      } catch (err) {
+        console.error("Failed to delete ticket:", err);
+      }
+    }
+  };
+
   const baseClass = "rounded-lg p-4 min-h-[90px] cursor-pointer transition-all duration-200 ease-out animate-fade-in hover:scale-[1.01] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]";
   const cardClass = isInProgress
     ? `${baseClass} bg-[var(--geist-accents-1)] hover:bg-[var(--geist-accents-2)] border border-[var(--geist-success)] animate-pulse-subtle`
@@ -123,6 +139,14 @@ export function TicketCard({ ticket }: Props) {
           >
             <Pencil size={12} aria-hidden="true" />
             Edit
+          </button>
+          <button
+            onClick={handleDelete}
+            className="text-xs text-[var(--geist-error)] hover:text-[var(--geist-error-dark)] transition-colors px-1.5 py-0.5 rounded hover:bg-[var(--geist-error-lighter)] focus:outline-none focus:ring-1 focus:ring-[var(--geist-error)] flex items-center gap-1"
+            aria-label={`Delete ${ticket.id}`}
+            title="Delete ticket"
+          >
+            <X size={12} aria-hidden="true" />
           </button>
         </div>
         {isInProgress && (

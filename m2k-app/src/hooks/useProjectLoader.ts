@@ -16,6 +16,7 @@ export function useProjectLoader() {
   const setActiveProjectId = useAppStore((s) => s.setActiveProjectId);
   const setSidebarCollapsed = useAppStore((s) => s.setSidebarCollapsed);
   const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed);
+  const setProjectLoading = useAppStore((s) => s.setProjectLoading);
   const prevSidebarCollapsed = useRef<boolean | null>(null);
 
   const validateProjectPath = useCallback(async (path: string): Promise<boolean> => {
@@ -118,7 +119,9 @@ export function useProjectLoader() {
 
   const switchToProject = useCallback(async (project: RegisteredProject): Promise<{ success: boolean; error?: string }> => {
     try {
-           // Update last accessed
+      setProjectLoading(true);
+
+      // Update last accessed
       await invoke("update_project_last_accessed", { id: project.id });
 
       // Save active project to app state
@@ -134,17 +137,21 @@ export function useProjectLoader() {
       // Load the project
       const result = await loadProject(project.path);
       if (!result.success) {
+        setProjectLoading(false);
         return result;
       }
 
       // Refresh projects to update last_accessed order
       await loadRegisteredProjects();
+
+      setProjectLoading(false);
       return { success: true };
     } catch (e) {
       console.error("Failed to switch project:", e);
+      setProjectLoading(false);
       return { success: false, error: String(e) };
     }
-  }, [setProjectPath, setActiveProjectId, loadProject, loadRegisteredProjects, validateProjectPath]);
+  }, [setProjectPath, setActiveProjectId, loadProject, loadRegisteredProjects, setProjectLoading]);
 
   const removeProject = useCallback(async (project: RegisteredProject) => {
     try {

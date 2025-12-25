@@ -18,6 +18,7 @@ export function Sidebar() {
   const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed);
   const setSidebarCollapsed = useAppStore((s) => s.setSidebarCollapsed);
   const triggerSave = useAppStore((s) => s.triggerSave);
+  const setSelectedEpic = useAppStore((s) => s.setSelectedEpic);
   const { selectFolder, switchToProject, removeProject, renameProject, validateProjectPath } = useProjectLoader();
   const [projectsExpanded, setProjectsExpanded] = useState(true);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -50,6 +51,7 @@ export function Sidebar() {
   }, [errorMessage]);
 
   const handleBoard = () => {
+    setSelectedEpic(null);
     setViewMode("kanban");
   };
 
@@ -112,7 +114,7 @@ export function Sidebar() {
       }`}
     >
       {/* Logo / Collapse Toggle */}
-      <div className={`py-3 border-b border-[var(--geist-accents-2)] flex items-center min-h-[52px] ${
+      <div className={`py-3 border-b border-[var(--geist-accents-2)] flex items-center min-h-[51px] ${
         sidebarCollapsed ? 'justify-center px-1' : 'justify-between px-4'
       }`}>
         {!sidebarCollapsed && (

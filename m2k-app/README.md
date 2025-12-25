@@ -1,115 +1,222 @@
-# M2K - Markdown to Kanban
+# M2K
 
-A desktop application that visualizes markdown-based project management files as a Kanban board. Built with Tauri, React, and Rust.
+> **M**arkdown **2** **K**anban - A powerful desktop application for managing epics and tickets with AI-powered assistance.
 
-## Purpose
+<p align="center">
+  <img src="https://img.shields.io/badge/version-0.1.0--alpha-pink?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/Tauri-2.x-blue?style=for-the-badge&logo=tauri" alt="Tauri">
+  <img src="https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react" alt="React">
+  <img src="https://img.shields.io/badge/TypeScript-5.8-3178c6?style=for-the-badge&logo=typescript" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Rust-1.x-orange?style=for-the-badge&logo=rust" alt="Rust">
+</p>
 
-M2K reads markdown ticket files from a project management folder structure and displays them in a 3-column Kanban board. It watches for file changes and updates the UI in real-time.
+---
 
-### Expected Folder Structure
+## ✨ Features
 
-```
-project-management/
-├── backlog/          # Tickets with "backlog" status
-│   ├── T-001.md
-│   └── T-002.md
-├── in-progress/      # Tickets with "in_progress" status
-│   └── T-003.md
-├── done/             # Tickets with "done" status
-│   └── T-004.md
-└── epics/            # Epic definition files
-    ├── EPIC-001-Name.md
-    └── EPIC-002-Name.md
-```
+### 🎯 Epic & Ticket Management
+- **Visual Epic Selection** - Beautiful grid view to browse and select epics
+- **Kanban Board** - Drag-and-drop tickets across Backlog → In Progress → Done
+- **Smart Filtering** - Filter tickets by epic with real-time stats
+- **Progress Tracking** - Visual progress bars and completion indicators
 
-### Ticket Format
+### 🤖 AI-Powered Workflows
+- **PRD Mode** - Create and edit Product Requirement Documents
+- **Claude Integration** - AI-assisted epic and ticket generation
+- **Smart Templates** - Automatic formatting and structure
 
-```markdown
-# T-001: Ticket Title
+### 🛠️ Developer Experience
+- **Integrated Terminal** - Built-in terminal with project context
+- **Resource Management** - Organize project resources and documentation
+- **Live File Watching** - Auto-sync with `.m2k` folder changes
+- **Vim Mode** - Optional vim keybindings in markdown editors
 
-**Epic:** EPIC-001
+### 🎨 Design & UX
+- **Dark Mode** - Beautiful dark theme powered by Geist Design
+- **Responsive Layout** - Optimized for different screen sizes
+- **Keyboard Shortcuts** - `Cmd/Ctrl + ,` for settings, and more
+- **Smooth Animations** - Polished transitions and interactions
 
-## Description
-What needs to be done.
+---
 
-## Acceptance Criteria
-- Criterion 1
-- Criterion 2
-```
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js (v20+)
-- Rust (1.70+)
-- macOS, Windows, or Linux
+## 🚀 Quick Start
 
 ### Installation
 
-```bash
-cd m2k-app
-npm install
+Download the latest release for your platform:
+
+- **macOS**: Download `.dmg` (Intel) or `.app.tar.gz` (Apple Silicon)
+- **Linux**: Download `.AppImage` or `.deb`
+- **Windows**: Download `.msi` or `.exe`
+
+👉 [**Download Latest Release**](https://github.com/YOUR_USERNAME/m2k-app/releases)
+
+### First Launch
+
+1. **Select a project folder** - M2K will initialize a `.m2k` directory
+2. **Configure API key** (optional) - Go to Settings → Anthropic API Key
+3. **Start creating** - Click "PRD" to create your first epic!
+
+---
+
+## 📦 Project Structure
+
+```
+your-project/
+└── .m2k/
+    ├── epics/           # Epic definitions (EPIC-XXX-name.md)
+    ├── backlog/         # Tickets ready for work (T-XXX-name.md)
+    ├── inprogress/      # Currently being worked on
+    ├── done/            # Completed tickets
+    └── resources/       # Project resources
 ```
 
-### Development
+---
+
+## 🛠️ Development
+
+### Prerequisites
+
+- **Node.js** 18+ (LTS recommended)
+- **Rust** 1.70+
+- **Platform-specific dependencies**:
+  - **macOS**: Xcode Command Line Tools
+  - **Linux**: `libwebkit2gtk-4.1-dev`, `libappindicator3-dev`, `librsvg2-dev`, `patchelf`
+  - **Windows**: Visual Studio C++ Build Tools
+
+### Setup
 
 ```bash
+# Clone the repository
+git clone https://github.com/israasaifullah/m2k-app.git
+cd m2k-app
+
+# Install dependencies
+npm install
+
+# Run in development mode
 npm run tauri dev
 ```
 
 ### Build
 
 ```bash
+# Build for production
 npm run tauri build
 ```
 
-## Code Structure
+---
 
-```
-m2k-app/
-├── src/                    # React frontend
-│   ├── components/         # UI components
-│   │   ├── KanbanBoard.tsx   # Main board with 3 columns
-│   │   ├── KanbanColumn.tsx  # Single column component
-│   │   ├── TicketCard.tsx    # Ticket card with expand
-│   │   └── EpicFilter.tsx    # Epic dropdown filter
-│   ├── hooks/
-│   │   └── useProjectLoader.ts  # Loads project, handles file watching
-│   ├── lib/
-│   │   ├── store.ts          # Zustand state management
-│   │   └── config.ts         # Config file utilities
-│   ├── types/
-│   │   └── index.ts          # TypeScript interfaces
-│   ├── App.tsx               # Main app component
-│   └── App.css               # Tailwind imports
-│
-└── src-tauri/              # Rust backend
-    └── src/
-        ├── lib.rs            # Tauri commands and plugins
-        ├── parser.rs         # Markdown parsing logic
-        └── watcher.rs        # File system watcher
+## 🚢 Release Process
+
+### Automated Release (Recommended)
+
+M2K uses GitHub Actions for automated multi-platform releases.
+
+```bash
+# 1. Update version in package.json and tauri.conf.json
+npm version 0.2.0-alpha --no-git-tag-version
+
+# 2. Commit changes
+git add .
+git commit -m "chore: bump version to 0.2.0-alpha"
+
+# 3. Create and push tag
+git tag v0.2.0-alpha
+git push origin main
+git push origin v0.2.0-alpha
 ```
 
-## Features
+**What happens next:**
+1. GitHub Actions builds binaries for macOS (Intel + Apple Silicon), Linux, and Windows
+2. Creates a draft GitHub release with all installers attached
+3. Review the draft release and publish when ready
 
-- **Kanban Board**: 3-column layout (Backlog, In Progress, Done)
-- **Epic Filtering**: Filter tickets by epic
-- **Live Updates**: File watcher detects changes and refreshes UI
-- **Config Persistence**: Remembers last opened project folder
-- **Dark Mode**: Automatic dark/light theme support
-- **Expandable Cards**: Click to expand ticket details
+### Manual Release
 
-## Tech Stack
+```bash
+# Build for current platform
+npm run tauri build
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | React 19, TypeScript, Tailwind CSS |
-| State | Zustand |
-| Backend | Rust, Tauri 2 |
-| Parsing | pulldown-cmark, regex |
-| File Watch | notify crate |
+# Artifacts will be in src-tauri/target/release/bundle/
+```
 
-## License
+---
 
-MIT
+## 🏗️ Tech Stack
+
+### Frontend
+- **React 19** - UI framework
+- **TypeScript 5.8** - Type safety
+- **Tailwind CSS 4** - Styling
+- **Vite** - Build tool
+- **Zustand** - State management
+- **XTerm.js** - Terminal emulator
+- **Monaco Editor** - Code editing
+- **Lucide React** - Icon library
+
+### Backend
+- **Tauri 2.x** - Desktop framework
+- **Rust** - Backend logic
+- **SQLite** - Project database
+- **Portable PTY** - Terminal integration
+- **Walkdir** - File system operations
+
+### AI Integration
+- **Claude API** - AI-powered features
+- **Anthropic SDK** - API client
+
+---
+
+## 🎨 Development Philosophy
+
+M2K follows clean code principles inspired by the project's CLAUDE.md workflow:
+
+- **Multi-line business logic** → Extract into named routines
+- **Ticket-based execution** → Each ticket is a checkpoint
+- **Conventional commits** → `feat:`, `fix:`, with ticket references
+- **Test before commit** → Always run build/compile checks
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Coding Guidelines
+
+- Use TypeScript for all new code
+- Follow existing code style
+- Add tests for new features
+- Update documentation as needed
+
+---
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- Built with [Tauri](https://tauri.app)
+- Powered by [Claude AI](https://claude.ai)
+- Designed with [Geist Design System](https://vercel.com/geist)
+- Icons by [Lucide](https://lucide.dev)
+
+---
+
+<p align="center">
+  <sub>Built with ❤️ using Claude Code</sub>
+</p>
+
+<p align="center">
+  <sub>v0.1.0-alpha</sub>
+</p>

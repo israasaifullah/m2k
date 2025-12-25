@@ -134,7 +134,7 @@ pub fn add_project(name: &str, path: &str) -> Result<Project, String> {
 pub fn get_all_projects() -> Result<Vec<Project>, String> {
     with_connection(|conn| {
         let mut stmt = conn.prepare(
-            "SELECT id, name, path, created_at, last_accessed FROM projects ORDER BY last_accessed DESC"
+            "SELECT id, name, path, created_at, last_accessed FROM projects"
         )?;
 
         let projects = stmt.query_map([], |row| {

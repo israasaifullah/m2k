@@ -1,6 +1,7 @@
 import "./App.css";
 import { useEffect } from "react";
 import { KanbanBoard } from "./components/KanbanBoard";
+import { EpicGrid } from "./components/EpicGrid";
 import { PRDMode } from "./components/PRDMode";
 import { SettingsPage } from "./components/SettingsPage";
 import { ResourceBoard } from "./components/ResourceBoard";
@@ -13,6 +14,8 @@ function App() {
   const projectPath = useAppStore((s) => s.projectPath);
   const viewMode = useAppStore((s) => s.viewMode);
   const setViewMode = useAppStore((s) => s.setViewMode);
+  const projectLoading = useAppStore((s) => s.projectLoading);
+  const selectedEpic = useAppStore((s) => s.selectedEpic);
   const { selectFolder } = useProjectLoader();
 
   // Keyboard shortcut: Cmd/Ctrl+, for settings
@@ -50,11 +53,11 @@ function App() {
   }
 
   return (
-    <main className="h-screen flex bg-[var(--geist-background)] text-[var(--geist-foreground)]" role="main" aria-label="Kanban board application">
+    <main className="h-screen flex bg-[var(--geist-background)] text-[var(--geist-foreground)] relative" role="main" aria-label="Kanban board application">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <div className="flex-1 min-h-0" role="region" aria-label={viewMode === "kanban" ? "Kanban board" : viewMode === "prd" ? "PRD editor" : viewMode === "resources" ? "Resources" : "Settings"}>
-          {viewMode === "kanban" && <KanbanBoard />}
+          {viewMode === "kanban" && (selectedEpic ? <KanbanBoard /> : <EpicGrid />)}
           {viewMode === "prd" && <PRDMode />}
           {viewMode === "resources" && <ResourceBoard />}
           {viewMode === "settings" && <SettingsPage />}
@@ -63,6 +66,16 @@ function App() {
           <Terminal />
         </div>
       </div>
+
+      {/* Loading overlay */}
+      {projectLoading && (
+        <div className="absolute inset-0 bg-[var(--geist-background)]/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-2 border-[var(--geist-accents-3)] border-t-[var(--geist-foreground)] rounded-full animate-spin" />
+            <p className="text-sm text-[var(--geist-accents-5)]">Loading project...</p>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

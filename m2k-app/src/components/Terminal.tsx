@@ -204,7 +204,7 @@ export function Terminal() {
       </div>
       <div
         ref={terminalRef}
-        className={`flex-1 p-1 overflow-auto ${isCollapsed ? "hidden" : ""}`}
+        className={`flex-1 overflow-auto ${isCollapsed ? "hidden" : ""}`}
       />
     </div>
   );

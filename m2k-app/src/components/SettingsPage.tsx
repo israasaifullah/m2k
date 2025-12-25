@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useAppStore } from "../lib/store";
 import { Toast, useToast } from "./Toast";
 import { Toggle } from "./Toggle";
+import packageJson from "../../package.json";
 
 interface ProjectSettings {
   project_path: string;
@@ -412,6 +413,22 @@ export function SettingsPage() {
           <p className="text-xs text-[var(--geist-accents-4)] text-center">
             Your API key is stored locally in your system's secure keychain and is never sent anywhere except Anthropic's servers.
           </p>
+
+          {/* App Version */}
+          <div className="bg-[var(--geist-accents-1)] border border-[var(--geist-accents-2)] rounded-lg p-4">
+            <h2 className="text-base font-medium text-[var(--geist-foreground)] mb-3">
+              App Version
+            </h2>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-[var(--geist-accents-5)]">Current version:</span>
+              <span className="px-3 py-1 rounded-md bg-[var(--geist-background)] border border-[var(--geist-accents-3)] text-[var(--geist-foreground)] font-mono text-sm">
+                v{packageJson.version}
+              </span>
+            </div>
+            <p className="text-xs text-[var(--geist-accents-5)] mt-3">
+              Built with Claude Code
+            </p>
+          </div>
         </div>
       </div>
 

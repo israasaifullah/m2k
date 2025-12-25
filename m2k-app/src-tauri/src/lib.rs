@@ -149,6 +149,11 @@ fn read_markdown_file(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+fn delete_markdown_file(path: String) -> Result<(), String> {
+    fs::remove_file(&path).map_err(|e| format!("Failed to delete file: {}", e))
+}
+
+#[tauri::command]
 fn read_image_as_base64(path: String) -> Result<String, String> {
     use base64::{Engine as _, engine::general_purpose};
 
@@ -772,6 +777,7 @@ pub fn run() {
             start_watcher,
             save_markdown_file,
             read_markdown_file,
+            delete_markdown_file,
             read_image_as_base64,
             get_next_epic_id,
             get_next_ticket_id,
