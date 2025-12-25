@@ -1,10 +1,10 @@
 # CLAUDE.md
-- In all interactions and commit messages, be extremely concise and sacrifice grammar for the sake of concision.
-- Always use multi-phase when in plan mode.
-- Ask the user if there is any unresolved questions.
+Be extremely concise. Sacrifice grammar for concision.
+In plan mode, always use multi-phase execution.
 
-## Working on an EPIC
-- All epics can be find under .m2k folder
+# WORKFLOW
+## .m2k Folder as Task Management 
+- All epics, tickets and resources can be find under .m2k folder
 
 ## Directory Structure
 
@@ -14,7 +14,7 @@
   backlog/      # Tickets ready for work (T-XXX-<name>.md)
   inprogress/  # Currently being worked on
   done/         # Completed (archive)
-  /    # Epic and ticket templates
+  resources/    # Resources 
 ```
 
 ## Ticket Lifecycle
@@ -23,33 +23,40 @@
 backlog/ → inprogress/ → done/
 ```
 
-## Working on an EPIC
-- When assign to an epic, find all the tickets related to that epic, work on it 1 by 1 and update the ticket status. 
-- When assign to a ticket, work on that particular ticket alone.
-- When you start working on a ticket, put it in the `.m2k/inprogress` folder first
-- If complete, can move the ticket into the `.m2k/done` folder. 
-- Clear the context after every epic work.
+## EPIC / TICKET Execution Rules
+* On EPIC assignment: locate all related tickets; execute sequentially; update each ticket’s status.
+* On TICKET assignment: execute **only** the specified ticket.
+* On ticket start: move ticket → `.m2k/inprogress`
+* On ticket completion: move ticket → `.m2k/done`
+* After EPIC completion: **clear working context**
+
 
 ## Branching Strategy 
-- For each ticket work, create 1 ticket branch `feature/{ticket_tag}/{description}`.
+CASE 1: On full EPIC request
+    - create an epic branch `feature/{epic_tag}/{description}`.
+CASE 2: On single TICKET request
+    - create a ticket branch `feature/{ticket_tag}/{description}`.
 
-# Commit Strategy
-- After finishing the task:
-    - checkout to ticket branch
-    - commit & push the code
-    - push upstream if necessary
-- Include ticket reference in commit messages:
+## Commit Strategy
+
+**Tickets act as execution checkpoints.**
+
+For each ticket:
+
+1. Checkout target branch
+2. Commit changes
+3. Push to remote
+4. Push upstream if required
+
+**All commits must include ticket reference:**
 
 ```
 feat: description (T-XXX)
 fix: description (T-XXX)
 ```
 
-### Maintainability Rules
-1. After every 5 completions of epics, strictly strictly remind the engineer to create a refactor epic.
-
 ### Clean Code Conventions
-1. Business logic with more than 1 line and nested inside branching condition should extract
+1. Multi-line business logic inside conditional blocks must be extracted into named routines.
 ```
 DONT:
 if (condition1)
