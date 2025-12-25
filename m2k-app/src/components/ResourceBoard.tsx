@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronRight, ChevronDown, Folder, File, FileText, Image, FileCode, Search, X, Plus, FolderPlus, Edit2, Trash2, Save, Upload } from "lucide-react";
+import { ChevronRight, ChevronDown, Folder, File, FileText, Image, FileCode, Search, X, Plus, FolderPlus, Edit2, Trash2, Save, Upload, Copy, Link } from "lucide-react";
 import { useAppStore } from "../lib/store";
 import { invoke } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
 import { MarkdownEditor } from "./MarkdownEditor";
+import { Toast, useToast } from "./Toast";
 
 interface FileNode {
   name: string;
@@ -301,9 +303,12 @@ interface ContextMenuProps {
   onClose: () => void;
   onRename: (node: FileNode) => void;
   onDelete: (node: FileNode) => void;
+  onCopyPath: (node: FileNode) => void;
+  onCopyMarkdownLink: (node: FileNode) => void;
+  onCopyReference: (node: FileNode) => void;
 }
 
-function ContextMenu({ node, x, y, onClose, onRename, onDelete }: ContextMenuProps) {
+function ContextMenu({ node, x, y, onClose, onRename, onDelete, onCopyPath, onCopyMarkdownLink, onCopyReference }: ContextMenuProps) {
   useEffect(() => {
     const handleClick = () => onClose();
     const handleEscape = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -315,12 +320,41 @@ function ContextMenu({ node, x, y, onClose, onRename, onDelete }: ContextMenuPro
     };
   }, [onClose]);
 
+  const ext = node.name.split('.').pop()?.toLowerCase();
+  const isImage = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext || '');
+  const isMarkdown = ['md', 'markdown'].includes(ext || '');
+
   return (
     <div
       className="fixed bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg shadow-xl py-1 z-50"
       style={{ left: x, top: y }}
       onClick={(e) => e.stopPropagation()}
     >
+      <button
+        onClick={() => { onCopyPath(node); onClose(); }}
+        className="w-full px-4 py-2 text-sm text-left hover:bg-[var(--geist-accents-1)] flex items-center gap-2"
+      >
+        <Copy size={14} />
+        Copy Relative Path
+      </button>
+      {isImage && (
+        <button
+          onClick={() => { onCopyMarkdownLink(node); onClose(); }}
+          className="w-full px-4 py-2 text-sm text-left hover:bg-[var(--geist-accents-1)] flex items-center gap-2"
+        >
+          <Link size={14} />
+          Copy Markdown Link
+        </button>
+      )}
+      {isMarkdown && (
+        <button
+          onClick={() => { onCopyReference(node); onClose(); }}
+          className="w-full px-4 py-2 text-sm text-left hover:bg-[var(--geist-accents-1)] flex items-center gap-2"
+        >
+          <Link size={14} />
+          Copy Reference
+        </button>
+      )}
       <button
         onClick={() => { onRename(node); onClose(); }}
         className="w-full px-4 py-2 text-sm text-left hover:bg-[var(--geist-accents-1)] flex items-center gap-2"
@@ -705,15 +739,45 @@ export function ResourceBoard() {
   const [renameNode, setRenameNode] = useState<FileNode | null>(null);
   const [deleteNode, setDeleteNode] = useState<FileNode | null>(null);
   const [contextMenu, setContextMenu] = useState<{ node: FileNode; x: number; y: number } | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string[]>([]);
+  const { toast, showToast, hideToast } = useToast();
 
   useEffect(() => {
     if (projectPath) {
       loadResourceTree();
     }
   }, [projectPath]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+Shift+C on Mac, Ctrl+Shift+C on Windows/Linux
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'c') {
+        e.preventDefault();
+        if (selectedPath && tree) {
+          // Find the node by path
+          const findNode = (node: FileNode): FileNode | null => {
+            if (node.path === selectedPath) return node;
+            if (node.children) {
+              for (const child of node.children) {
+                const found = findNode(child);
+                if (found) return found;
+              }
+            }
+            return null;
+          };
+
+          const node = findNode(tree);
+          if (node) {
+            handleCopyPath(node);
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedPath, tree]);
 
   const loadResourceTree = async () => {
     if (!projectPath) return;
@@ -746,27 +810,68 @@ export function ResourceBoard() {
     setSelectedPath(null);
   };
 
-  const handleFileUpload = async (files: FileList | File[]) => {
+  const handleCopyPath = async (node: FileNode) => {
+    try {
+      // Extract relative path (resources/...)
+      const pathParts = node.path.split('/resources/');
+      const relativePath = pathParts.length > 1 ? `resources/${pathParts[1]}` : node.path;
+
+      await navigator.clipboard.writeText(relativePath);
+      showToast("Copied to clipboard", "success");
+    } catch (err) {
+      showToast("Failed to copy path", "error");
+    }
+  };
+
+  const handleCopyMarkdownLink = async (node: FileNode) => {
+    try {
+      const pathParts = node.path.split('/resources/');
+      const relativePath = pathParts.length > 1 ? `resources/${pathParts[1]}` : node.path;
+
+      // Use filename without extension as alt text
+      const altText = node.name.replace(/\.[^/.]+$/, '');
+      const markdownLink = `![${altText}](${relativePath})`;
+
+      await navigator.clipboard.writeText(markdownLink);
+      showToast("Copied markdown link", "success");
+    } catch (err) {
+      showToast("Failed to copy markdown link", "error");
+    }
+  };
+
+  const handleCopyReference = async (node: FileNode) => {
+    try {
+      // Strip .md extension for wiki-link syntax
+      const filename = node.name.replace(/\.md$/, '');
+      const reference = `[[${filename}]]`;
+
+      await navigator.clipboard.writeText(reference);
+      showToast("Copied reference", "success");
+    } catch (err) {
+      showToast("Failed to copy reference", "error");
+    }
+  };
+
+  const handleFileUpload = async (filePaths: string[]) => {
     if (!projectPath) return;
 
     setUploading(true);
     setUploadProgress([]);
 
-    const fileArray = Array.from(files);
-
-    for (const file of fileArray) {
+    for (const filePath of filePaths) {
+      const fileName = filePath.split('/').pop() || filePath.split('\\').pop() || 'unknown';
       try {
-        setUploadProgress(prev => [...prev, `Uploading ${file.name}...`]);
+        setUploadProgress(prev => [...prev, `Uploading ${fileName}...`]);
 
         await invoke<string>("upload_resource", {
           projectPath,
-          sourcePath: (file as any).path,
-          filename: file.name,
+          sourcePath: filePath,
+          filename: null,
         });
 
-        setUploadProgress(prev => [...prev, `✓ ${file.name} uploaded`]);
+        setUploadProgress(prev => [...prev, `✓ ${fileName} uploaded`]);
       } catch (err) {
-        setUploadProgress(prev => [...prev, `✗ ${file.name} failed: ${err}`]);
+        setUploadProgress(prev => [...prev, `✗ ${fileName} failed: ${err}`]);
       }
     }
 
@@ -777,41 +882,21 @@ export function ResourceBoard() {
     }, 2000);
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
+  const handleFilePickerClick = async () => {
+    try {
+      const selected = await open({
+        multiple: true,
+        directory: false,
+      });
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
-
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      await handleFileUpload(files);
-    }
-  };
-
-  const handleFilePickerClick = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.multiple = true;
-    input.accept = 'image/*,.pdf,.doc,.docx,.xls,.xlsx,.md,.txt';
-    input.onchange = (e) => {
-      const files = (e.target as HTMLInputElement).files;
-      if (files && files.length > 0) {
-        handleFileUpload(files);
+      if (selected && Array.isArray(selected)) {
+        await handleFileUpload(selected);
+      } else if (selected && typeof selected === 'string') {
+        await handleFileUpload([selected]);
       }
-    };
-    input.click();
+    } catch (err) {
+      console.error('File selection cancelled or failed:', err);
+    }
   };
 
   const resourcePath = projectPath ? `${projectPath}/resources` : "";
@@ -902,17 +987,7 @@ export function ResourceBoard() {
             </div>
           )}
         </div>
-        <div
-          className="flex-1 overflow-y-auto py-1 relative"
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-        >
-          {isDragging && (
-            <div className="absolute inset-0 bg-[var(--geist-success)]/10 border-2 border-dashed border-[var(--geist-success)] flex items-center justify-center z-10">
-              <p className="text-[var(--geist-success)] font-medium">Drop files to upload</p>
-            </div>
-          )}
+        <div className="flex-1 overflow-y-auto py-1 relative">
           {filteredTree?.children?.map((child) => (
             <TreeItem
               key={child.path}
@@ -978,8 +1053,13 @@ export function ResourceBoard() {
           onClose={() => setContextMenu(null)}
           onRename={(node) => setRenameNode(node)}
           onDelete={(node) => setDeleteNode(node)}
+          onCopyPath={handleCopyPath}
+          onCopyMarkdownLink={handleCopyMarkdownLink}
+          onCopyReference={handleCopyReference}
         />
       )}
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={hideToast} duration={2000} />}
     </div>
   );
 }

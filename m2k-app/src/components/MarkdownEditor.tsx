@@ -1,6 +1,6 @@
 import Editor, { loader } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useImperativeHandle, forwardRef } from "react";
 import { initVimMode, VimMode } from "monaco-vim";
 import { useAppStore } from "../lib/store";
 
@@ -8,6 +8,10 @@ interface Props {
   value: string;
   onChange: (value: string) => void;
   readOnly?: boolean;
+}
+
+export interface MarkdownEditorHandle {
+  insertText: (text: string) => void;
 }
 
 // Define custom Geist dark theme
@@ -45,19 +49,40 @@ loader.init().then((monaco) => {
   defineGeistTheme(monaco);
 });
 
-export function MarkdownEditor({ value, onChange, readOnly = false }: Props) {
-  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-  const vimModeRef = useRef<VimMode | null>(null);
-  const statusBarRef = useRef<HTMLDivElement | null>(null);
-  const vimEnabled = useAppStore((s) => s.vimMode);
-  const [editorReady, setEditorReady] = useState(false);
+export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
+  function MarkdownEditor({ value, onChange, readOnly = false }, ref) {
+    const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+    const vimModeRef = useRef<VimMode | null>(null);
+    const statusBarRef = useRef<HTMLDivElement | null>(null);
+    const vimEnabled = useAppStore((s) => s.vimMode);
+    const [editorReady, setEditorReady] = useState(false);
 
-  const handleEditorMount = (editor: editor.IStandaloneCodeEditor) => {
-    editorRef.current = editor;
-    editor.focus();
-    // Delay to ensure status bar is rendered
-    setTimeout(() => setEditorReady(true), 0);
-  };
+    useImperativeHandle(ref, () => ({
+      insertText: (text: string) => {
+        const editor = editorRef.current;
+        if (!editor) return;
+
+        const selection = editor.getSelection();
+        if (!selection) return;
+
+        const id = { major: 1, minor: 1 };
+        const op = {
+          identifier: id,
+          range: selection,
+          text,
+          forceMoveMarkers: true,
+        };
+        editor.executeEdits("resource-picker", [op]);
+        editor.focus();
+      },
+    }));
+
+    const handleEditorMount = (editor: editor.IStandaloneCodeEditor) => {
+      editorRef.current = editor;
+      editor.focus();
+      // Delay to ensure status bar is rendered
+      setTimeout(() => setEditorReady(true), 0);
+    };
 
   useEffect(() => {
     if (!editorReady || !editorRef.current || !statusBarRef.current) return;
@@ -77,59 +102,60 @@ export function MarkdownEditor({ value, onChange, readOnly = false }: Props) {
     };
   }, [editorReady, vimEnabled, readOnly]);
 
-  const handleChange = (newValue: string | undefined) => {
-    if (newValue !== undefined) {
-      onChange(newValue);
-    }
-  };
+    const handleChange = (newValue: string | undefined) => {
+      if (newValue !== undefined) {
+        onChange(newValue);
+      }
+    };
 
-  return (
-    <div
-      className="h-full w-full flex flex-col rounded-lg overflow-hidden border border-[var(--geist-accents-2)] animate-fade-in"
-      role="region"
-      aria-label="Markdown editor"
-    >
-      <div className="flex-1 min-h-0">
-        <Editor
-          height="100%"
-          defaultLanguage="markdown"
-          theme="geist-dark"
-          value={value}
-          onChange={handleChange}
-          onMount={handleEditorMount}
-          options={{
-            readOnly,
-            fontSize: 14,
-            fontFamily: '"Geist Mono", monospace',
-            lineHeight: 1.6,
-            minimap: { enabled: false },
-            scrollBeyondLastLine: false,
-            wordWrap: "on",
-            padding: { top: 16, bottom: 16 },
-            lineNumbers: "on",
-            renderLineHighlight: "line",
-            cursorBlinking: "smooth",
-            cursorSmoothCaretAnimation: "on",
-            smoothScrolling: true,
-            tabSize: 2,
-            automaticLayout: true,
-            folding: true,
-            foldingStrategy: "indentation",
-            showFoldingControls: "mouseover",
-            bracketPairColorization: { enabled: false },
-            guides: { indentation: true },
-            accessibilitySupport: "auto",
-            ariaLabel: "Markdown editor content",
-          }}
-        />
+    return (
+      <div
+        className="h-full w-full flex flex-col rounded-lg overflow-hidden border border-[var(--geist-accents-2)] animate-fade-in"
+        role="region"
+        aria-label="Markdown editor"
+      >
+        <div className="flex-1 min-h-0">
+          <Editor
+            height="100%"
+            defaultLanguage="markdown"
+            theme="geist-dark"
+            value={value}
+            onChange={handleChange}
+            onMount={handleEditorMount}
+            options={{
+              readOnly,
+              fontSize: 14,
+              fontFamily: '"Geist Mono", monospace',
+              lineHeight: 1.6,
+              minimap: { enabled: false },
+              scrollBeyondLastLine: false,
+              wordWrap: "on",
+              padding: { top: 16, bottom: 16 },
+              lineNumbers: "on",
+              renderLineHighlight: "line",
+              cursorBlinking: "smooth",
+              cursorSmoothCaretAnimation: "on",
+              smoothScrolling: true,
+              tabSize: 2,
+              automaticLayout: true,
+              folding: true,
+              foldingStrategy: "indentation",
+              showFoldingControls: "mouseover",
+              bracketPairColorization: { enabled: false },
+              guides: { indentation: true },
+              accessibilitySupport: "auto",
+              ariaLabel: "Markdown editor content",
+            }}
+          />
+        </div>
+        {!readOnly && (
+          <div
+            ref={statusBarRef}
+            className={`h-6 px-3 flex items-center bg-[var(--geist-accents-1)] border-t border-[var(--geist-accents-2)] text-xs font-mono text-[var(--geist-accents-5)] ${vimEnabled ? '' : 'hidden'}`}
+            aria-label="Vim status bar"
+          />
+        )}
       </div>
-      {!readOnly && (
-        <div
-          ref={statusBarRef}
-          className={`h-6 px-3 flex items-center bg-[var(--geist-accents-1)] border-t border-[var(--geist-accents-2)] text-xs font-mono text-[var(--geist-accents-5)] ${vimEnabled ? '' : 'hidden'}`}
-          aria-label="Vim status bar"
-        />
-      )}
-    </div>
-  );
-}
+    );
+  }
+);
