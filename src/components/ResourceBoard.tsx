@@ -751,7 +751,6 @@ function DeleteDialog({ node, onClose, onSuccess }: DeleteDialogProps) {
 
 export function ResourceBoard() {
   const projectPath = useAppStore((s) => s.projectPath);
-  const setSaveCallback = useAppStore((s) => s.setSaveCallback);
   const [tree, setTree] = useState<FileNode | null>(null);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [selectedIsDirectory, setSelectedIsDirectory] = useState(false);

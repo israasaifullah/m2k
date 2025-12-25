@@ -329,11 +329,13 @@ export function PRDMode() {
         await invoke("save_markdown_file", { path: filePath, content });
 
         // Optimistic update - add epic to store immediately
+        const scopeMatch = content.match(/## Scope\s+(.*?)(?=\n##|\n\n##|$)/s);
+        const scope = scopeMatch?.[1]?.trim() || "";
         const newEpic = {
           id: `EPIC-${paddedId}`,
           title: title,
-          path: filePath,
-          status: "todo" as const,
+          scope: scope,
+          tickets: [],
         };
         setEpics([...epics, newEpic]);
 
@@ -364,12 +366,19 @@ export function PRDMode() {
         // Optimistic update - add ticket to store immediately
         const titleMatch = content.match(/^# T-\d+: (.+)$/m);
         const title = titleMatch?.[1]?.trim() || "Untitled";
+        const descMatch = content.match(/## Description\s+(.*?)(?=\n##|$)/s);
+        const description = descMatch?.[1]?.trim() || "";
+        const criteriaMatch = content.match(/## Acceptance Criteria\s+(.*?)(?=\n##|$)/s);
+        const criteriaText = criteriaMatch?.[1]?.trim() || "";
+        const criteria = criteriaText.split('\n').filter(line => line.trim().startsWith('-')).map(line => line.trim().substring(1).trim());
         const newTicket = {
           id: `T-${paddedId}`,
           title: title,
           epic: selectedEpic,
+          description: description,
+          criteria: criteria,
           status: "backlog" as const,
-          path: filePath,
+          filePath: filePath,
         };
         setTickets([...tickets, newTicket]);
 

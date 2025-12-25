@@ -3,7 +3,7 @@
 > **M**arkdown **2** **K**anban - A powerful desktop application for managing epics and tickets with AI-powered assistance.
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.0--alpha-pink?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.1.1--alpha-pink?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/Tauri-2.x-blue?style=for-the-badge&logo=tauri" alt="Tauri">
   <img src="https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react" alt="React">
   <img src="https://img.shields.io/badge/TypeScript-5.8-3178c6?style=for-the-badge&logo=typescript" alt="TypeScript">
@@ -214,9 +214,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 <p align="center">
-  <sub>Built with ❤️ using Claude Code</sub>
+  <sub>Built with ❤️ using Claude Code </sub>
 </p>
 
 <p align="center">
-  <sub>v0.1.0-alpha</sub>
+  <sub>v0.1.1-alpha</sub>
 </p>

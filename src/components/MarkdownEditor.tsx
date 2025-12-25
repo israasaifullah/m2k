@@ -101,7 +101,6 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
           onChange(value);
           // Call the registered save callback
           triggerSave();
-          return null;
         }
       });
 

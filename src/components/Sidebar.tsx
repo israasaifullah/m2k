@@ -1,4 +1,4 @@
-import { Settings, FolderOpen, Plus, LayoutGrid, ChevronDown, ChevronRight, Folder, AlertTriangle, Files, Brain } from "lucide-react";
+import { Settings, Plus, LayoutGrid, ChevronDown, ChevronRight, Folder, AlertTriangle, Files, Brain } from "lucide-react";
 import { useAppStore, RegisteredProject } from "../lib/store";
 import { useProjectLoader } from "../hooks/useProjectLoader";
 import { ProjectContextMenu } from "./ProjectContextMenu";
