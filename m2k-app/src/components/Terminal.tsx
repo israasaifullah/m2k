@@ -21,6 +21,7 @@ export function Terminal() {
     // Initialize xterm
     const xterm = new XTerm({
       cursorBlink: true,
+      scrollback: 1000, // Limit scrollback buffer to prevent memory issues
       fontSize: 13,
       fontFamily: "Geist Mono, Monaco, Menlo, monospace",
       theme: {
@@ -71,16 +72,35 @@ export function Terminal() {
         ptyIdRef.current = ptyId;
         setIsConnected(true);
 
+        // Throttled output buffering
+        let writeBuffer = '';
+        let writeTimeout: number | null = null;
+
+        const flushBuffer = () => {
+          if (writeBuffer) {
+            xterm.write(writeBuffer);
+            writeBuffer = '';
+          }
+          writeTimeout = null;
+        };
+
         // Listen for PTY output
         const unlistenOutput = await listen<string>(
           `pty-output-${ptyId}`,
           (event) => {
-            xterm.write(event.payload);
+            writeBuffer += event.payload;
+
+            if (writeTimeout) clearTimeout(writeTimeout);
+            writeTimeout = setTimeout(flushBuffer, 16); // ~60fps
           }
         );
 
         // Listen for PTY exit
         const unlistenExit = await listen(`pty-exit-${ptyId}`, () => {
+          // Flush any remaining buffered output
+          if (writeTimeout) clearTimeout(writeTimeout);
+          flushBuffer();
+
           xterm.write("\r\n\x1b[31m[Process exited]\x1b[0m\r\n");
           setIsConnected(false);
         });

@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
 
 pub struct PtyInstance {
@@ -74,20 +75,36 @@ pub fn spawn_pty(app: AppHandle, working_dir: String, cols: u16, rows: u16) -> R
     let app_clone = app.clone();
     let pty_id_clone = pty_id;
     thread::spawn(move || {
-        let mut buf = [0u8; 4096];
+        let mut buf = [0u8; 8192]; // Increased buffer size
+        let mut batch = String::new();
+        let mut last_emit = Instant::now();
+
         loop {
             match reader.read(&mut buf) {
                 Ok(0) => {
-                    // EOF - process exited
+                    // EOF - emit any remaining batch before exit
+                    if !batch.is_empty() {
+                        let _ = app_clone.emit(&format!("pty-output-{}", pty_id_clone), batch.clone());
+                    }
                     let _ = app_clone.emit(&format!("pty-exit-{}", pty_id_clone), ());
                     break;
                 }
                 Ok(n) => {
-                    let data = String::from_utf8_lossy(&buf[..n]).to_string();
-                    let _ = app_clone.emit(&format!("pty-output-{}", pty_id_clone), data);
+                    batch.push_str(&String::from_utf8_lossy(&buf[..n]));
+
+                    // Emit every 50ms OR when batch exceeds 32KB
+                    if last_emit.elapsed() > Duration::from_millis(50) || batch.len() > 32768 {
+                        let _ = app_clone.emit(&format!("pty-output-{}", pty_id_clone), batch.clone());
+                        batch.clear();
+                        last_emit = Instant::now();
+                    }
                 }
                 Err(e) => {
                     log::error!("PTY read error: {}", e);
+                    // Emit any remaining batch before error exit
+                    if !batch.is_empty() {
+                        let _ = app_clone.emit(&format!("pty-output-{}", pty_id_clone), batch);
+                    }
                     break;
                 }
             }
