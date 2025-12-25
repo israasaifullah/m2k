@@ -12,41 +12,47 @@
 .m2k/
   epics/        # Epic definitions (EPIC-XXX-<name>.md)
   backlog/      # Tickets ready for work (T-XXX-<name>.md)
-  in-progress/  # Currently being worked on
+  inprogress/  # Currently being worked on
   done/         # Completed (archive)
-  templates/    # Epic and ticket templates
+  /    # Epic and ticket templates
 ```
 
 ## Ticket Lifecycle
 
 ```
-backlog/ → in-progress/ → done/
+backlog/ → inprogress/ → done/
 ```
 
-## If user ask to run an entire EPIC 
-- When assign to an epic, find all the tickets related to that epic, work on it 1 by 1 and update the ticket status. If complete, can move the ticket into the /done folder. 
-
+## Working on an EPIC
+- When assign to an epic, find all the tickets related to that epic, work on it 1 by 1 and update the ticket status. 
 - When you start working on a ticket, put it in the inprogress folder first
-
+- If complete, can move the ticket into the /done folder. 
 - Clear the context after every epic work.
 
-## Commit Strategy
-- If user start an execution with a ticket, after every completed execution of ticket, create a new branch and make a commit
-- Features Branch: `feature/{ticket_tag}/{description}`
-- Bugfixes Branch: `bugfix/{ticket_tag}/{description}`
+## When working on a TICKET 
+- When assign to a ticket, work on that particular ticket alone.
+- When you start working on a ticket, put it in the inprogress folder first
+- If complete, can move the ticket into the /done folder. 
+- Clear the context after every epic work.
 
-### Commit Convention
-Include ticket reference in commit messages:
+## Branching Strategy 
+- For each ticket work, create 1 ticket branch `feature/{ticket_tag}/{description}`.
+
+# Commit Strategy
+- After finishing the task:
+    - checkout to ticket branch
+    - commit & push the code
+    - push upstream if necessary
+- Include ticket reference in commit messages:
 ```
 feat: description (T-XXX)
 fix: description (T-XXX)
 ```
 
-### Refactor Rules
+### Maintainability Rules
 1. After every 5 completions of epics, strictly strictly remind the engineer to create a refactor epic.
 
 ### Clean Code Conventions
-
 1. Business logic with more than 1 line and nested inside branching condition should extract
 ```
 DONT:
@@ -65,6 +71,3 @@ if (condition1)
 else
     Routine2()
 ```
-
-### Maintaining Readability
-1. After every runs of epics, update the changed Class Interfaces and put it in the resource folder.
