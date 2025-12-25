@@ -701,6 +701,88 @@ fn rename_file_or_folder(old_path: String, new_path: String) -> Result<(), Strin
         .map_err(|e| format!("Failed to rename: {}", e))
 }
 
+#[tauri::command]
+fn upload_resource(
+    project_path: String,
+    source_path: String,
+    filename: Option<String>,
+) -> Result<String, String> {
+    let base_dir = if project_path.ends_with(".m2k") || project_path.ends_with(".m2k/") {
+        PathBuf::from(&project_path)
+    } else {
+        PathBuf::from(&project_path).join(".m2k")
+    };
+
+    let resources_dir = base_dir.join("resources");
+
+    fs::create_dir_all(&resources_dir)
+        .map_err(|e| format!("Failed to create resources directory: {}", e))?;
+
+    let source = Path::new(&source_path);
+    if !source.exists() {
+        return Err("Source file does not exist".to_string());
+    }
+
+    let file_name = filename.unwrap_or_else(|| {
+        source
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string()
+    });
+
+    // Auto-organize by file type
+    let ext = Path::new(&file_name)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+
+    let subfolder = match ext.as_str() {
+        "png" | "jpg" | "jpeg" | "gif" | "svg" | "webp" | "bmp" | "ico" => "images",
+        "pdf" | "doc" | "docx" | "xls" | "xlsx" | "ppt" | "pptx" => "documents",
+        "fig" | "sketch" | "xd" | "psd" | "ai" => "designs",
+        "md" | "markdown" | "txt" => "text",
+        "mp4" | "mov" | "avi" | "mkv" | "webm" => "videos",
+        "mp3" | "wav" | "ogg" | "m4a" => "audio",
+        "zip" | "tar" | "gz" | "rar" | "7z" => "archives",
+        _ => "other",
+    };
+
+    let target_dir = resources_dir.join(subfolder);
+    fs::create_dir_all(&target_dir)
+        .map_err(|e| format!("Failed to create subfolder: {}", e))?;
+
+    let mut dest_path = target_dir.join(&file_name);
+
+    // Handle duplicates: append (1), (2), etc.
+    if dest_path.exists() {
+        let stem = Path::new(&file_name)
+            .file_stem()
+            .unwrap_or_default()
+            .to_string_lossy();
+        let ext_str = Path::new(&file_name)
+            .extension()
+            .map(|e| format!(".{}", e.to_string_lossy()))
+            .unwrap_or_default();
+
+        let mut counter = 1;
+        loop {
+            let new_name = format!("{} ({}){}", stem, counter, ext_str);
+            dest_path = target_dir.join(&new_name);
+            if !dest_path.exists() {
+                break;
+            }
+            counter += 1;
+        }
+    }
+
+    fs::copy(source, &dest_path)
+        .map_err(|e| format!("Failed to copy file: {}", e))?;
+
+    Ok(dest_path.to_string_lossy().to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -761,7 +843,8 @@ pub fn run() {
             delete_file,
             create_folder,
             delete_folder,
-            rename_file_or_folder
+            rename_file_or_folder,
+            upload_resource
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
