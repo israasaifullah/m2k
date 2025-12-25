@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronRight, ChevronDown, Folder, File, FileText, Image, FileCode, Search, X, Plus, FolderPlus, Edit2, Trash2, Save, Upload, Copy } from "lucide-react";
+import { ChevronRight, ChevronDown, Folder, File, FileText, Image, FileCode, Search, X, Plus, FolderPlus, Edit2, Trash2, Save, Upload, Copy, Link } from "lucide-react";
 import { useAppStore } from "../lib/store";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -304,9 +304,11 @@ interface ContextMenuProps {
   onRename: (node: FileNode) => void;
   onDelete: (node: FileNode) => void;
   onCopyPath: (node: FileNode) => void;
+  onCopyMarkdownLink: (node: FileNode) => void;
+  onCopyReference: (node: FileNode) => void;
 }
 
-function ContextMenu({ node, x, y, onClose, onRename, onDelete, onCopyPath }: ContextMenuProps) {
+function ContextMenu({ node, x, y, onClose, onRename, onDelete, onCopyPath, onCopyMarkdownLink, onCopyReference }: ContextMenuProps) {
   useEffect(() => {
     const handleClick = () => onClose();
     const handleEscape = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -317,6 +319,10 @@ function ContextMenu({ node, x, y, onClose, onRename, onDelete, onCopyPath }: Co
       document.removeEventListener("keydown", handleEscape);
     };
   }, [onClose]);
+
+  const ext = node.name.split('.').pop()?.toLowerCase();
+  const isImage = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext || '');
+  const isMarkdown = ['md', 'markdown'].includes(ext || '');
 
   return (
     <div
@@ -331,6 +337,24 @@ function ContextMenu({ node, x, y, onClose, onRename, onDelete, onCopyPath }: Co
         <Copy size={14} />
         Copy Relative Path
       </button>
+      {isImage && (
+        <button
+          onClick={() => { onCopyMarkdownLink(node); onClose(); }}
+          className="w-full px-4 py-2 text-sm text-left hover:bg-[var(--geist-accents-1)] flex items-center gap-2"
+        >
+          <Link size={14} />
+          Copy Markdown Link
+        </button>
+      )}
+      {isMarkdown && (
+        <button
+          onClick={() => { onCopyReference(node); onClose(); }}
+          className="w-full px-4 py-2 text-sm text-left hover:bg-[var(--geist-accents-1)] flex items-center gap-2"
+        >
+          <Link size={14} />
+          Copy Reference
+        </button>
+      )}
       <button
         onClick={() => { onRename(node); onClose(); }}
         className="w-full px-4 py-2 text-sm text-left hover:bg-[var(--geist-accents-1)] flex items-center gap-2"
@@ -769,6 +793,35 @@ export function ResourceBoard() {
     }
   };
 
+  const handleCopyMarkdownLink = async (node: FileNode) => {
+    try {
+      const pathParts = node.path.split('/resources/');
+      const relativePath = pathParts.length > 1 ? `resources/${pathParts[1]}` : node.path;
+
+      // Use filename without extension as alt text
+      const altText = node.name.replace(/\.[^/.]+$/, '');
+      const markdownLink = `![${altText}](${relativePath})`;
+
+      await navigator.clipboard.writeText(markdownLink);
+      showToast("Copied markdown link", "success");
+    } catch (err) {
+      showToast("Failed to copy markdown link", "error");
+    }
+  };
+
+  const handleCopyReference = async (node: FileNode) => {
+    try {
+      // Strip .md extension for wiki-link syntax
+      const filename = node.name.replace(/\.md$/, '');
+      const reference = `[[${filename}]]`;
+
+      await navigator.clipboard.writeText(reference);
+      showToast("Copied reference", "success");
+    } catch (err) {
+      showToast("Failed to copy reference", "error");
+    }
+  };
+
   const handleFileUpload = async (filePaths: string[]) => {
     if (!projectPath) return;
 
@@ -971,6 +1024,8 @@ export function ResourceBoard() {
           onRename={(node) => setRenameNode(node)}
           onDelete={(node) => setDeleteNode(node)}
           onCopyPath={handleCopyPath}
+          onCopyMarkdownLink={handleCopyMarkdownLink}
+          onCopyReference={handleCopyReference}
         />
       )}
 
