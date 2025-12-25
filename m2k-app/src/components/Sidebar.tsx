@@ -1,4 +1,4 @@
-import { Settings, FolderOpen, Plus, Sparkles, LayoutGrid, ChevronDown, ChevronRight, Folder, AlertTriangle, Files } from "lucide-react";
+import { Settings, FolderOpen, Plus, LayoutGrid, ChevronDown, ChevronRight, Folder, AlertTriangle, Files } from "lucide-react";
 import { useAppStore, RegisteredProject } from "../lib/store";
 import { useProjectLoader } from "../hooks/useProjectLoader";
 import { ProjectContextMenu } from "./ProjectContextMenu";
@@ -13,7 +13,6 @@ export function Sidebar() {
   const viewMode = useAppStore((s) => s.viewMode);
   const setViewMode = useAppStore((s) => s.setViewMode);
   const resetPrdState = useAppStore((s) => s.resetPrdState);
-  const resetSmartModeState = useAppStore((s) => s.resetSmartModeState);
   const registeredProjects = useAppStore((s) => s.registeredProjects);
   const activeProjectId = useAppStore((s) => s.activeProjectId);
   const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed);
@@ -56,11 +55,6 @@ export function Sidebar() {
   const handleCreateNew = () => {
     resetPrdState();
     setViewMode("prd");
-  };
-
-  const handleSmartMode = () => {
-    resetSmartModeState();
-    setViewMode("smart");
   };
 
   const handleSettings = () => {
@@ -143,18 +137,6 @@ export function Sidebar() {
             <Files size={18} />
           </button>
           <button
-            onClick={handleSmartMode}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === "smart"
-                ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white"
-                : "hover:bg-[var(--geist-accents-1)] text-[var(--geist-accents-5)]"
-            }`}
-            aria-label="Smart Mode"
-            title="Smart Mode"
-          >
-            <Sparkles size={18} />
-          </button>
-          <button
             onClick={handleCreateNew}
             className={`p-2 rounded-md transition-colors ${
               viewMode === "prd"
@@ -234,19 +216,6 @@ export function Sidebar() {
         >
           <Files size={16} />
           Resources
-        </button>
-
-        <button
-          onClick={handleSmartMode}
-          className={`w-full px-3 py-2 text-sm rounded-md flex items-center gap-2 transition-colors ${
-            viewMode === "smart"
-              ? "bg-gradient-to-r from-purple-500 to-blue-500 text-white"
-              : "hover:bg-[var(--geist-accents-1)] text-[var(--geist-accents-5)]"
-          }`}
-          aria-label="Open Smart Mode"
-        >
-          <Sparkles size={16} />
-          Smart
         </button>
 
         <button

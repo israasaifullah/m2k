@@ -1,38 +1,15 @@
-mod claude;
-mod claude_cli;
 mod db;
 mod parser;
 mod pty;
 mod watcher;
-
-use claude::GeneratedEpic;
-use claude_cli::ClaudeCliResult;
 use db::Project;
 use keyring::Entry;
 use parser::{Epic, Ticket};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
 use tauri::AppHandle;
-use tokio::sync::Mutex;
 
-// Global state for managing Claude CLI execution
-static CLAUDE_CLI_STOP_FLAG: std::sync::OnceLock<Arc<AtomicBool>> = std::sync::OnceLock::new();
-static CLAUDE_CLI_RUNNING: std::sync::OnceLock<Arc<Mutex<bool>>> = std::sync::OnceLock::new();
-
-fn get_stop_flag() -> Arc<AtomicBool> {
-    CLAUDE_CLI_STOP_FLAG
-        .get_or_init(|| Arc::new(AtomicBool::new(false)))
-        .clone()
-}
-
-fn get_running_flag() -> Arc<Mutex<bool>> {
-    CLAUDE_CLI_RUNNING
-        .get_or_init(|| Arc::new(Mutex::new(false)))
-        .clone()
-}
 
 const KEYRING_SERVICE: &str = "m2k-app";
 const KEYRING_USER: &str = "anthropic-api-key";
@@ -143,59 +120,6 @@ fn has_api_key() -> Result<bool, String> {
     }
 }
 
-#[tauri::command]
-async fn validate_api_key(api_key: String) -> Result<bool, String> {
-    claude::validate_api_key(&api_key).await
-}
-
-#[derive(Debug, Serialize)]
-pub struct ApiStatus {
-    pub configured: bool,
-    pub connected: bool,
-    pub error: Option<String>,
-}
-
-#[tauri::command]
-async fn check_api_status() -> Result<ApiStatus, String> {
-    let entry = Entry::new(KEYRING_SERVICE, KEYRING_USER)
-        .map_err(|e| format!("Failed to access keyring: {}", e))?;
-
-    let api_key = match entry.get_password() {
-        Ok(key) => key,
-        Err(keyring::Error::NoEntry) => {
-            return Ok(ApiStatus {
-                configured: false,
-                connected: false,
-                error: None,
-            });
-        }
-        Err(e) => {
-            return Ok(ApiStatus {
-                configured: false,
-                connected: false,
-                error: Some(format!("Keyring error: {}", e)),
-            });
-        }
-    };
-
-    match claude::validate_api_key(&api_key).await {
-        Ok(true) => Ok(ApiStatus {
-            configured: true,
-            connected: true,
-            error: None,
-        }),
-        Ok(false) => Ok(ApiStatus {
-            configured: true,
-            connected: false,
-            error: Some("Invalid API key".to_string()),
-        }),
-        Err(e) => Ok(ApiStatus {
-            configured: true,
-            connected: false,
-            error: Some(e),
-        }),
-    }
-}
 
 #[tauri::command]
 fn parse_tickets(path: String) -> Result<Vec<Ticket>, String> {
@@ -252,57 +176,7 @@ fn get_next_ticket_id(project_path: String) -> Result<u32, String> {
     Ok(max_id + 1)
 }
 
-#[tauri::command]
-fn check_claude_cli() -> Result<bool, String> {
-    claude_cli::check_claude_code_installed()
-}
 
-#[tauri::command]
-fn get_claude_cli_version() -> Result<Option<String>, String> {
-    claude_cli::get_claude_code_version()
-}
-
-#[tauri::command]
-async fn start_claude_cli(
-    app: AppHandle,
-    prompt: String,
-    working_dir: String,
-) -> Result<ClaudeCliResult, String> {
-    let running = get_running_flag();
-    let mut is_running = running.lock().await;
-
-    if *is_running {
-        return Err("Claude Code is already running".to_string());
-    }
-
-    *is_running = true;
-    let stop_flag = get_stop_flag();
-    stop_flag.store(false, Ordering::Relaxed);
-
-    drop(is_running); // Release lock before long operation
-
-    let result = claude_cli::execute_claude_code(app, prompt, working_dir, stop_flag).await;
-
-    // Reset running state
-    let mut is_running = running.lock().await;
-    *is_running = false;
-
-    result
-}
-
-#[tauri::command]
-async fn stop_claude_cli() -> Result<(), String> {
-    let stop_flag = get_stop_flag();
-    stop_flag.store(true, Ordering::Relaxed);
-    Ok(())
-}
-
-#[tauri::command]
-async fn is_claude_cli_running() -> Result<bool, String> {
-    let running = get_running_flag();
-    let is_running = running.lock().await;
-    Ok(*is_running)
-}
 
 #[tauri::command]
 fn move_ticket_to_status(
@@ -416,15 +290,6 @@ fn update_epic_ticket_status(
     Ok(())
 }
 
-#[tauri::command]
-async fn generate_epic(
-    project_path: String,
-    requirements: String,
-) -> Result<GeneratedEpic, String> {
-    let next_epic_id = get_next_epic_id(project_path.clone())?;
-    let next_ticket_id = get_next_ticket_id(project_path)?;
-    claude::generate_epic_and_tickets(requirements, next_epic_id, next_ticket_id).await
-}
 
 #[tauri::command]
 fn spawn_pty(app: AppHandle, working_dir: String, cols: u16, rows: u16) -> Result<u32, String> {
@@ -803,8 +668,6 @@ pub fn run() {
             load_api_key,
             delete_api_key,
             has_api_key,
-            validate_api_key,
-            check_api_status,
             parse_tickets,
             parse_epics,
             start_watcher,
@@ -812,12 +675,6 @@ pub fn run() {
             read_markdown_file,
             get_next_epic_id,
             get_next_ticket_id,
-            generate_epic,
-            check_claude_cli,
-            get_claude_cli_version,
-            start_claude_cli,
-            stop_claude_cli,
-            is_claude_cli_running,
             move_ticket_to_status,
             update_epic_ticket_status,
             spawn_pty,

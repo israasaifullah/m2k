@@ -9,7 +9,7 @@ export interface RegisteredProject {
   last_accessed: string;
 }
 
-export type ViewMode = "kanban" | "prd" | "smart" | "settings" | "resources";
+export type ViewMode = "kanban" | "prd" | "settings" | "resources";
 export type PrdDocType = "epic" | "ticket";
 
 interface PrdState {
@@ -19,44 +19,6 @@ interface PrdState {
   editingPath: string | null;
 }
 
-export interface GeneratedTicket {
-  id: string;
-  title: string;
-  description: string;
-  criteria: string[];
-  technicalNotes: string;
-  dependencies: string;
-  testing: string;
-}
-
-export interface GeneratedEpic {
-  id: string;
-  title: string;
-  scope: string;
-  tickets: GeneratedTicket[];
-}
-
-export type SmartModePhase = "input" | "generating" | "preview";
-
-interface SmartModeState {
-  phase: SmartModePhase;
-  requirements: string;
-  generatedEpic: GeneratedEpic | null;
-  error: string | null;
-}
-
-export type ExecutionStatus = "idle" | "running" | "paused" | "completed" | "error";
-
-export interface ExecutionState {
-  status: ExecutionStatus;
-  epicId: string | null;
-  currentTicketId: string | null;
-  completedTickets: string[];
-  totalTickets: number;
-  output: string[];
-  error: string | null;
-  startedAt: number | null;
-}
 
 interface AppState {
   tickets: Ticket[];
@@ -65,8 +27,6 @@ interface AppState {
   projectPath: string | null;
   viewMode: ViewMode;
   prdState: PrdState;
-  smartModeState: SmartModeState;
-  executionState: ExecutionState;
   vimMode: boolean;
   registeredProjects: RegisteredProject[];
   activeProjectId: number | null;
@@ -79,11 +39,6 @@ interface AppState {
   setViewMode: (mode: ViewMode) => void;
   setPrdState: (state: Partial<PrdState>) => void;
   resetPrdState: () => void;
-  setSmartModeState: (state: Partial<SmartModeState>) => void;
-  resetSmartModeState: () => void;
-  setExecutionState: (state: Partial<ExecutionState>) => void;
-  resetExecutionState: () => void;
-  addExecutionOutput: (line: string) => void;
   setVimMode: (enabled: boolean) => void;
   setRegisteredProjects: (projects: RegisteredProject[]) => void;
   setActiveProjectId: (id: number | null) => void;
@@ -97,23 +52,6 @@ const defaultPrdState: PrdState = {
   editingPath: null,
 };
 
-const defaultSmartModeState: SmartModeState = {
-  phase: "input",
-  requirements: "",
-  generatedEpic: null,
-  error: null,
-};
-
-const defaultExecutionState: ExecutionState = {
-  status: "idle",
-  epicId: null,
-  currentTicketId: null,
-  completedTickets: [],
-  totalTickets: 0,
-  output: [],
-  error: null,
-  startedAt: null,
-};
 
 export const useAppStore = create<AppState>((set, get) => ({
   tickets: [],
@@ -122,8 +60,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   projectPath: null,
   viewMode: "kanban",
   prdState: { ...defaultPrdState },
-  smartModeState: { ...defaultSmartModeState },
-  executionState: { ...defaultExecutionState },
   vimMode: true,
   registeredProjects: [],
   activeProjectId: null,
@@ -140,16 +76,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   setViewMode: (mode) => set({ viewMode: mode }),
   setPrdState: (state) => set((s) => ({ prdState: { ...s.prdState, ...state } })),
   resetPrdState: () => set({ prdState: { ...defaultPrdState } }),
-  setSmartModeState: (state) => set((s) => ({ smartModeState: { ...s.smartModeState, ...state } })),
-  resetSmartModeState: () => set({ smartModeState: { ...defaultSmartModeState } }),
-  setExecutionState: (state) => set((s) => ({ executionState: { ...s.executionState, ...state } })),
-  resetExecutionState: () => set({ executionState: { ...defaultExecutionState } }),
-  addExecutionOutput: (line) => set((s) => ({
-    executionState: {
-      ...s.executionState,
-      output: [...s.executionState.output.slice(-500), line], // Keep last 500 lines
-    },
-  })),
   setVimMode: (enabled) => set({ vimMode: enabled }),
   setRegisteredProjects: (projects) => set({ registeredProjects: projects }),
   setActiveProjectId: (id) => set({ activeProjectId: id }),

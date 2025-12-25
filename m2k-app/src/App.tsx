@@ -2,7 +2,6 @@ import "./App.css";
 import { useEffect } from "react";
 import { KanbanBoard } from "./components/KanbanBoard";
 import { PRDMode } from "./components/PRDMode";
-import { SmartMode } from "./components/SmartMode";
 import { SettingsPage } from "./components/SettingsPage";
 import { ResourceBoard } from "./components/ResourceBoard";
 import { Terminal } from "./components/Terminal";
@@ -54,10 +53,9 @@ function App() {
     <main className="h-screen flex bg-[var(--geist-background)] text-[var(--geist-foreground)]" role="main" aria-label="Kanban board application">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="flex-1 min-h-0" role="region" aria-label={viewMode === "kanban" ? "Kanban board" : viewMode === "prd" ? "PRD editor" : viewMode === "smart" ? "Smart Mode" : viewMode === "resources" ? "Resources" : "Settings"}>
+        <div className="flex-1 min-h-0" role="region" aria-label={viewMode === "kanban" ? "Kanban board" : viewMode === "prd" ? "PRD editor" : viewMode === "resources" ? "Resources" : "Settings"}>
           {viewMode === "kanban" && <KanbanBoard />}
           {viewMode === "prd" && <PRDMode />}
-          {viewMode === "smart" && <SmartMode />}
           {viewMode === "resources" && <ResourceBoard />}
           {viewMode === "settings" && <SettingsPage />}
         </div>
