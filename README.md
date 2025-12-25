@@ -218,5 +218,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 </p>
 
 <p align="center">
-  <sub>v0.1.1-alpha</sub>
+  <sub>v0.1.2-alpha</sub>
 </p>
