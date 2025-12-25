@@ -149,6 +149,32 @@ fn read_markdown_file(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+fn read_image_as_base64(path: String) -> Result<String, String> {
+    use base64::{Engine as _, engine::general_purpose};
+
+    let bytes = fs::read(&path).map_err(|e| format!("Failed to read image: {}", e))?;
+    let base64_str = general_purpose::STANDARD.encode(&bytes);
+
+    // Determine MIME type from extension
+    let ext = Path::new(&path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+
+    let mime_type = match ext.as_str() {
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "svg" => "image/svg+xml",
+        "webp" => "image/webp",
+        _ => "application/octet-stream",
+    };
+
+    Ok(format!("data:{};base64,{}", mime_type, base64_str))
+}
+
+#[tauri::command]
 fn get_next_epic_id(project_path: String) -> Result<u32, String> {
     let epics = parser::parse_epics(&project_path)?;
     let max_id = epics
@@ -405,6 +431,7 @@ fn init_m2k_folder(project_path: String) -> Result<String, String> {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct FileNode {
     name: String,
     path: String,
@@ -571,6 +598,7 @@ fn upload_resource(
     project_path: String,
     source_path: String,
     filename: Option<String>,
+    destination_folder: Option<String>,
 ) -> Result<String, String> {
     let base_dir = if project_path.ends_with(".m2k") || project_path.ends_with(".m2k/") {
         PathBuf::from(&project_path)
@@ -596,27 +624,34 @@ fn upload_resource(
             .to_string()
     });
 
-    // Auto-organize by file type
-    let ext = Path::new(&file_name)
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("")
-        .to_lowercase();
+    // Determine target directory
+    let target_dir = if let Some(dest) = destination_folder {
+        // Upload to specific folder
+        resources_dir.join(dest)
+    } else {
+        // Auto-organize by file type
+        let ext = Path::new(&file_name)
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_lowercase();
 
-    let subfolder = match ext.as_str() {
-        "png" | "jpg" | "jpeg" | "gif" | "svg" | "webp" | "bmp" | "ico" => "images",
-        "pdf" | "doc" | "docx" | "xls" | "xlsx" | "ppt" | "pptx" => "documents",
-        "fig" | "sketch" | "xd" | "psd" | "ai" => "designs",
-        "md" | "markdown" | "txt" => "text",
-        "mp4" | "mov" | "avi" | "mkv" | "webm" => "videos",
-        "mp3" | "wav" | "ogg" | "m4a" => "audio",
-        "zip" | "tar" | "gz" | "rar" | "7z" => "archives",
-        _ => "other",
+        let subfolder = match ext.as_str() {
+            "png" | "jpg" | "jpeg" | "gif" | "svg" | "webp" | "bmp" | "ico" => "images",
+            "pdf" | "doc" | "docx" | "xls" | "xlsx" | "ppt" | "pptx" => "documents",
+            "fig" | "sketch" | "xd" | "psd" | "ai" => "designs",
+            "md" | "markdown" | "txt" => "text",
+            "mp4" | "mov" | "avi" | "mkv" | "webm" => "videos",
+            "mp3" | "wav" | "ogg" | "m4a" => "audio",
+            "zip" | "tar" | "gz" | "rar" | "7z" => "archives",
+            _ => "other",
+        };
+
+        resources_dir.join(subfolder)
     };
 
-    let target_dir = resources_dir.join(subfolder);
     fs::create_dir_all(&target_dir)
-        .map_err(|e| format!("Failed to create subfolder: {}", e))?;
+        .map_err(|e| format!("Failed to create target directory: {}", e))?;
 
     let mut dest_path = target_dir.join(&file_name);
 
@@ -673,6 +708,7 @@ pub fn run() {
             start_watcher,
             save_markdown_file,
             read_markdown_file,
+            read_image_as_base64,
             get_next_epic_id,
             get_next_ticket_id,
             move_ticket_to_status,

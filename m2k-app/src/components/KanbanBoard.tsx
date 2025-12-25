@@ -36,7 +36,7 @@ function StatsSection() {
   const hasStats = stats.totalEpics > 0 || stats.totalTickets > 0;
 
   return (
-    <div className="flex items-center justify-center gap-3 py-2 border-b border-[var(--geist-accents-2)]">
+    <div className="flex items-center justify-center gap-3 py-3 border-b border-[var(--geist-accents-2)]">
       <EpicFilter />
       <div className="w-px h-4 bg-[var(--geist-accents-3)]" />
       {hasStats && (

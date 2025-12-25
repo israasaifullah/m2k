@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { ChevronRight, ChevronDown, Folder, File, FileText, Image, FileCode, Search, X, Plus, FolderPlus, Edit2, Trash2, Save, Upload, Copy, Link } from "lucide-react";
+import { ChevronRight, ChevronDown, Folder, File, FileText, Image, FileCode, Search, X, Plus, FolderPlus, Edit2, Trash2, Save, Upload, Copy } from "lucide-react";
 import { useAppStore } from "../lib/store";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -17,7 +17,9 @@ interface TreeItemProps {
   node: FileNode;
   level: number;
   selectedPath: string | null;
-  onSelect: (path: string) => void;
+  expandedPaths: Set<string>;
+  onToggleExpand: (path: string) => void;
+  onSelect: (path: string, isDirectory: boolean) => void;
   onContextMenu: (node: FileNode, event: React.MouseEvent) => void;
 }
 
@@ -51,15 +53,14 @@ function getFileIcon(fileName: string) {
   }
 }
 
-function TreeItem({ node, level, selectedPath, onSelect, onContextMenu }: TreeItemProps) {
-  const [expanded, setExpanded] = useState(false);
+function TreeItem({ node, level, selectedPath, expandedPaths, onToggleExpand, onSelect, onContextMenu }: TreeItemProps) {
+  const expanded = expandedPaths.has(node.path);
 
   const handleToggle = () => {
     if (node.isDirectory) {
-      setExpanded(!expanded);
-    } else {
-      onSelect(node.path);
+      onToggleExpand(node.path);
     }
+    onSelect(node.path, node.isDirectory);
   };
 
   const isSelected = selectedPath === node.path;
@@ -100,6 +101,8 @@ function TreeItem({ node, level, selectedPath, onSelect, onContextMenu }: TreeIt
               node={child}
               level={level + 1}
               selectedPath={selectedPath}
+              expandedPaths={expandedPaths}
+              onToggleExpand={onToggleExpand}
               onSelect={onSelect}
               onContextMenu={onContextMenu}
             />
@@ -116,6 +119,7 @@ interface FilePreviewProps {
 
 function FilePreview({ path }: FilePreviewProps) {
   const [content, setContent] = useState<string | null>(null);
+  const [imageData, setImageData] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -131,11 +135,26 @@ function FilePreview({ path }: FilePreviewProps) {
   const loadFile = async () => {
     setLoading(true);
     setError(null);
+    const ext = path.split('.').pop()?.toLowerCase();
+    const isImage = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext || '');
+
+    if (isImage) {
+      try {
+        const base64Data = await invoke<string>("read_image_as_base64", { path });
+        setImageData(base64Data);
+      } catch (err) {
+        setError(String(err));
+        setImageData(null);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     try {
       const fileContent = await invoke<string>("read_markdown_file", { path });
       setContent(fileContent);
       setEditContent(fileContent);
-      const ext = path.split('.').pop()?.toLowerCase();
       const isMarkdown = ['md', 'markdown'].includes(ext || '');
       setEditing(isMarkdown);
     } catch (err) {
@@ -190,11 +209,11 @@ function FilePreview({ path }: FilePreviewProps) {
     );
   }
 
-  if (isImage) {
+  if (isImage && imageData) {
     return (
       <div className="h-full flex items-center justify-center p-4">
         <img
-          src={`asset://localhost/${encodeURIComponent(path)}`}
+          src={imageData}
           alt={path.split('/').pop()}
           className="max-w-full max-h-full object-contain"
         />
@@ -304,11 +323,11 @@ interface ContextMenuProps {
   onRename: (node: FileNode) => void;
   onDelete: (node: FileNode) => void;
   onCopyPath: (node: FileNode) => void;
-  onCopyMarkdownLink: (node: FileNode) => void;
-  onCopyReference: (node: FileNode) => void;
+  onUploadToFolder?: (node: FileNode) => void;
+  onNewFileInFolder?: (node: FileNode) => void;
 }
 
-function ContextMenu({ node, x, y, onClose, onRename, onDelete, onCopyPath, onCopyMarkdownLink, onCopyReference }: ContextMenuProps) {
+function ContextMenu({ node, x, y, onClose, onRename, onDelete, onCopyPath, onUploadToFolder, onNewFileInFolder }: ContextMenuProps) {
   useEffect(() => {
     const handleClick = () => onClose();
     const handleEscape = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -320,16 +339,30 @@ function ContextMenu({ node, x, y, onClose, onRename, onDelete, onCopyPath, onCo
     };
   }, [onClose]);
 
-  const ext = node.name.split('.').pop()?.toLowerCase();
-  const isImage = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext || '');
-  const isMarkdown = ['md', 'markdown'].includes(ext || '');
-
   return (
     <div
       className="fixed bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg shadow-xl py-1 z-50"
       style={{ left: x, top: y }}
       onClick={(e) => e.stopPropagation()}
     >
+      {node.isDirectory && onNewFileInFolder && (
+        <button
+          onClick={() => { onNewFileInFolder(node); onClose(); }}
+          className="w-full px-4 py-2 text-sm text-left hover:bg-[var(--geist-accents-1)] flex items-center gap-2"
+        >
+          <Plus size={14} />
+          New File Here
+        </button>
+      )}
+      {node.isDirectory && onUploadToFolder && (
+        <button
+          onClick={() => { onUploadToFolder(node); onClose(); }}
+          className="w-full px-4 py-2 text-sm text-left hover:bg-[var(--geist-accents-1)] flex items-center gap-2"
+        >
+          <Upload size={14} />
+          Upload Files Here
+        </button>
+      )}
       <button
         onClick={() => { onCopyPath(node); onClose(); }}
         className="w-full px-4 py-2 text-sm text-left hover:bg-[var(--geist-accents-1)] flex items-center gap-2"
@@ -337,24 +370,6 @@ function ContextMenu({ node, x, y, onClose, onRename, onDelete, onCopyPath, onCo
         <Copy size={14} />
         Copy Relative Path
       </button>
-      {isImage && (
-        <button
-          onClick={() => { onCopyMarkdownLink(node); onClose(); }}
-          className="w-full px-4 py-2 text-sm text-left hover:bg-[var(--geist-accents-1)] flex items-center gap-2"
-        >
-          <Link size={14} />
-          Copy Markdown Link
-        </button>
-      )}
-      {isMarkdown && (
-        <button
-          onClick={() => { onCopyReference(node); onClose(); }}
-          className="w-full px-4 py-2 text-sm text-left hover:bg-[var(--geist-accents-1)] flex items-center gap-2"
-        >
-          <Link size={14} />
-          Copy Reference
-        </button>
-      )}
       <button
         onClick={() => { onRename(node); onClose(); }}
         className="w-full px-4 py-2 text-sm text-left hover:bg-[var(--geist-accents-1)] flex items-center gap-2"
@@ -381,7 +396,7 @@ interface NewFileDialogProps {
 
 function NewFileDialog({ parentPath, onClose, onSuccess }: NewFileDialogProps) {
   const [fileName, setFileName] = useState("");
-  const [template, setTemplate] = useState("blank");
+  const [template, setTemplate] = useState("markdown");
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
@@ -392,9 +407,9 @@ function NewFileDialog({ parentPath, onClose, onSuccess }: NewFileDialogProps) {
   }, [onClose, creating]);
 
   const templates: Record<string, string> = {
-    blank: "",
     markdown: "# New Document\n\n",
-    readme: "# README\n\n## Overview\n\n## Usage\n\n",
+    yaml: "# YAML Configuration\n\n",
+    json: "{\n  \n}\n",
   };
 
   const handleCreate = async () => {
@@ -445,9 +460,9 @@ function NewFileDialog({ parentPath, onClose, onSuccess }: NewFileDialogProps) {
               onChange={(e) => setTemplate(e.target.value)}
               className="w-full px-3 py-2 text-sm bg-[var(--geist-background)] border border-[var(--geist-accents-2)] rounded focus:outline-none focus:border-[var(--geist-accents-4)]"
             >
-              <option value="blank">Blank</option>
               <option value="markdown">Markdown</option>
-              <option value="readme">README</option>
+              <option value="yaml">YAML</option>
+              <option value="json">JSON</option>
             </select>
           </div>
         </div>
@@ -731,10 +746,12 @@ export function ResourceBoard() {
   const projectPath = useAppStore((s) => s.projectPath);
   const [tree, setTree] = useState<FileNode | null>(null);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const [selectedIsDirectory, setSelectedIsDirectory] = useState(false);
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [fileType, setFileType] = useState<string>("all");
   const [showNewFileDialog, setShowNewFileDialog] = useState(false);
+  const [newFileParentPath, setNewFileParentPath] = useState<string>("");
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
   const [renameNode, setRenameNode] = useState<FileNode | null>(null);
   const [deleteNode, setDeleteNode] = useState<FileNode | null>(null);
@@ -797,9 +814,9 @@ export function ResourceBoard() {
 
   const filteredTree = useMemo(() => {
     if (!tree) return null;
-    if (searchQuery === "" && fileType === "all") return tree;
-    return filterTree(tree, searchQuery, fileType);
-  }, [tree, searchQuery, fileType]);
+    if (searchQuery === "") return tree;
+    return filterTree(tree, searchQuery, "all");
+  }, [tree, searchQuery]);
 
   const handleContextMenu = (node: FileNode, event: React.MouseEvent) => {
     setContextMenu({ node, x: event.clientX, y: event.clientY });
@@ -823,36 +840,7 @@ export function ResourceBoard() {
     }
   };
 
-  const handleCopyMarkdownLink = async (node: FileNode) => {
-    try {
-      const pathParts = node.path.split('/resources/');
-      const relativePath = pathParts.length > 1 ? `resources/${pathParts[1]}` : node.path;
-
-      // Use filename without extension as alt text
-      const altText = node.name.replace(/\.[^/.]+$/, '');
-      const markdownLink = `![${altText}](${relativePath})`;
-
-      await navigator.clipboard.writeText(markdownLink);
-      showToast("Copied markdown link", "success");
-    } catch (err) {
-      showToast("Failed to copy markdown link", "error");
-    }
-  };
-
-  const handleCopyReference = async (node: FileNode) => {
-    try {
-      // Strip .md extension for wiki-link syntax
-      const filename = node.name.replace(/\.md$/, '');
-      const reference = `[[${filename}]]`;
-
-      await navigator.clipboard.writeText(reference);
-      showToast("Copied reference", "success");
-    } catch (err) {
-      showToast("Failed to copy reference", "error");
-    }
-  };
-
-  const handleFileUpload = async (filePaths: string[]) => {
+  const handleFileUpload = async (filePaths: string[], destinationFolder?: string) => {
     if (!projectPath) return;
 
     setUploading(true);
@@ -867,6 +855,7 @@ export function ResourceBoard() {
           projectPath,
           sourcePath: filePath,
           filename: null,
+          destinationFolder,
         });
 
         setUploadProgress(prev => [...prev, `✓ ${fileName} uploaded`]);
@@ -882,7 +871,7 @@ export function ResourceBoard() {
     }, 2000);
   };
 
-  const handleFilePickerClick = async () => {
+  const handleFilePickerClick = async (destinationFolder?: string) => {
     try {
       const selected = await open({
         multiple: true,
@@ -890,13 +879,25 @@ export function ResourceBoard() {
       });
 
       if (selected && Array.isArray(selected)) {
-        await handleFileUpload(selected);
+        await handleFileUpload(selected, destinationFolder);
       } else if (selected && typeof selected === 'string') {
-        await handleFileUpload([selected]);
+        await handleFileUpload([selected], destinationFolder);
       }
     } catch (err) {
       console.error('File selection cancelled or failed:', err);
     }
+  };
+
+  const handleUploadToFolder = async (node: FileNode) => {
+    // Extract relative path from resources/
+    const pathParts = node.path.split('/resources/');
+    const relativePath = pathParts.length > 1 ? pathParts[1] : '';
+    await handleFilePickerClick(relativePath);
+  };
+
+  const handleNewFileInFolder = (node: FileNode) => {
+    setNewFileParentPath(node.path);
+    setShowNewFileDialog(true);
   };
 
   const resourcePath = projectPath ? `${projectPath}/resources` : "";
@@ -914,7 +915,22 @@ export function ResourceBoard() {
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
           <p className="text-[var(--geist-accents-5)] mb-2">No resources folder found</p>
-          <p className="text-xs text-[var(--geist-accents-4)]">Create a .m2k/resources folder to get started</p>
+          <p className="text-xs text-[var(--geist-accents-4)] mb-4">Create resources folder to get started</p>
+          <button
+            onClick={async () => {
+              if (projectPath) {
+                try {
+                  await invoke("create_folder", { path: `${projectPath}/resources` });
+                  loadResourceTree();
+                } catch (err) {
+                  console.error("Failed to create resources folder:", err);
+                }
+              }
+            }}
+            className="px-4 py-2 text-sm bg-[var(--geist-success)] text-white rounded-full hover:opacity-90"
+          >
+            Create Resources Folder
+          </button>
         </div>
       </div>
     );
@@ -928,7 +944,10 @@ export function ResourceBoard() {
             <h2 className="text-sm font-medium">Resources</h2>
             <div className="flex gap-1">
               <button
-                onClick={() => setShowNewFileDialog(true)}
+                onClick={() => {
+                  setNewFileParentPath(resourcePath);
+                  setShowNewFileDialog(true);
+                }}
                 className="p-1 hover:bg-[var(--geist-accents-1)] rounded"
                 title="New file"
               >
@@ -961,18 +980,8 @@ export function ResourceBoard() {
               </button>
             )}
           </div>
-          <select
-            value={fileType}
-            onChange={(e) => setFileType(e.target.value)}
-            className="w-full px-2 py-1.5 text-sm bg-[var(--geist-background)] border border-[var(--geist-accents-2)] rounded focus:outline-none focus:border-[var(--geist-accents-4)]"
-          >
-            <option value="all">All types</option>
-            <option value="markdown">Markdown</option>
-            <option value="image">Images</option>
-            <option value="code">Code</option>
-          </select>
           <button
-            onClick={handleFilePickerClick}
+            onClick={() => handleFilePickerClick()}
             disabled={uploading}
             className="w-full mt-2 px-3 py-2 text-sm bg-[var(--geist-success)] text-white rounded hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
           >
@@ -994,7 +1003,22 @@ export function ResourceBoard() {
               node={child}
               level={0}
               selectedPath={selectedPath}
-              onSelect={setSelectedPath}
+              expandedPaths={expandedPaths}
+              onToggleExpand={(path) => {
+                setExpandedPaths(prev => {
+                  const next = new Set(prev);
+                  if (next.has(path)) {
+                    next.delete(path);
+                  } else {
+                    next.add(path);
+                  }
+                  return next;
+                });
+              }}
+              onSelect={(path, isDir) => {
+                setSelectedPath(path);
+                setSelectedIsDirectory(isDir);
+              }}
               onContextMenu={handleContextMenu}
             />
           ))}
@@ -1004,8 +1028,16 @@ export function ResourceBoard() {
         </div>
       </div>
       <div className="flex-1 overflow-auto bg-[var(--geist-background)]">
-        {selectedPath ? (
+        {selectedPath && !selectedIsDirectory ? (
           <FilePreview path={selectedPath} />
+        ) : selectedPath && selectedIsDirectory ? (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center">
+              <Folder size={48} className="mx-auto mb-3 text-[var(--geist-accents-4)]" />
+              <p className="text-[var(--geist-foreground)] font-medium mb-1">{selectedPath.split('/').pop()}</p>
+              <p className="text-xs text-[var(--geist-accents-5)]">Folder selected</p>
+            </div>
+          </div>
         ) : (
           <div className="h-full flex items-center justify-center">
             <p className="text-[var(--geist-accents-5)]">Select a file to preview</p>
@@ -1015,8 +1047,11 @@ export function ResourceBoard() {
 
       {showNewFileDialog && (
         <NewFileDialog
-          parentPath={resourcePath}
-          onClose={() => setShowNewFileDialog(false)}
+          parentPath={newFileParentPath || resourcePath}
+          onClose={() => {
+            setShowNewFileDialog(false);
+            setNewFileParentPath("");
+          }}
           onSuccess={handleRefresh}
         />
       )}
@@ -1054,8 +1089,8 @@ export function ResourceBoard() {
           onRename={(node) => setRenameNode(node)}
           onDelete={(node) => setDeleteNode(node)}
           onCopyPath={handleCopyPath}
-          onCopyMarkdownLink={handleCopyMarkdownLink}
-          onCopyReference={handleCopyReference}
+          onUploadToFolder={handleUploadToFolder}
+          onNewFileInFolder={handleNewFileInFolder}
         />
       )}
 

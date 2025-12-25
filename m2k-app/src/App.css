@@ -12,7 +12,8 @@
   --geist-accents-6: #999;
   --geist-accents-7: #eaeaea;
   --geist-accents-8: #fafafa;
-  --geist-success: #0070f3;
+  --ds-pink-500: #ec4899;
+  --geist-success: var(--ds-pink-500);
   --geist-error: #e00;
   --geist-warning: #f5a623;
 }
@@ -29,11 +30,11 @@ code, pre, .font-mono {
 @keyframes pulse-subtle {
   0%, 100% {
     opacity: 1;
-    box-shadow: 0 0 8px rgba(0, 112, 243, 0.4);
+    box-shadow: 0 0 8px rgba(236, 72, 153, 0.4);
   }
   50% {
     opacity: 0.95;
-    box-shadow: 0 0 20px rgba(0, 112, 243, 0.6);
+    box-shadow: 0 0 20px rgba(236, 72, 153, 0.6);
   }
 }
 

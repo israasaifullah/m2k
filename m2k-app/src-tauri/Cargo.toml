@@ -37,4 +37,5 @@ env_logger = "0.11"
 portable-pty = "0.8"
 lazy_static = "1.4"
 rusqlite = { version = "0.36", features = ["bundled"] }
+base64 = "0.22"
 

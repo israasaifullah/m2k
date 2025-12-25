@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useAppStore } from "../lib/store";
 import { Toast, useToast } from "./Toast";
+import { Toggle } from "./Toggle";
 
 export function SettingsPage() {
   const setViewMode = useAppStore((s) => s.setViewMode);
@@ -199,21 +200,13 @@ export function SettingsPage() {
                   Enable vim keybindings in markdown editors
                 </p>
               </div>
-              <button
+              <Toggle
                 id="vim-toggle"
-                onClick={() => setVimMode(!vimMode)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-2 focus:ring-offset-[var(--geist-background)] ${
-                  vimMode ? 'bg-[var(--geist-success)]' : 'bg-[var(--geist-accents-3)]'
-                }`}
-                role="switch"
-                aria-checked={vimMode}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    vimMode ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
+                checked={vimMode}
+                onChange={setVimMode}
+                label="Vim Mode"
+                showLabel={false}
+              />
             </div>
           </div>
 

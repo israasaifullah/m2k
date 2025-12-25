@@ -1,6 +1,6 @@
 import { useMemo, useEffect } from "react";
-import { ChevronDown } from "lucide-react";
 import { useAppStore } from "../lib/store";
+import { Select } from "./Select";
 
 export function EpicFilter() {
   const epics = useAppStore((s) => s.epics);
@@ -24,22 +24,17 @@ export function EpicFilter() {
   }, [selectedEpic, sortedEpics, setSelectedEpic]);
 
   return (
-    <div className="relative inline-flex items-center">
-      <select
-        id="epic-filter"
-        value={selectedEpic || ""}
-        onChange={(e) => setSelectedEpic(e.target.value || null)}
-        className="appearance-none px-3 py-1.5 pr-8 text-xs font-medium bg-[var(--geist-accents-1)] border border-[var(--geist-accents-3)] rounded-full text-[var(--geist-foreground)] hover:bg-[var(--geist-accents-2)] focus:border-[var(--geist-success)] focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] transition-all cursor-pointer"
-        aria-label="Filter tickets by epic"
-      >
-        <option value="">All Epics</option>
-        {sortedEpics.map((epic) => (
-          <option key={epic.id} value={epic.id}>
-            {epic.id}: {epic.title}
-          </option>
-        ))}
-      </select>
-      <ChevronDown size={12} className="absolute right-2.5 pointer-events-none text-[var(--geist-accents-5)]" />
-    </div>
+    <Select
+      value={selectedEpic || ""}
+      onChange={(value) => setSelectedEpic(value || null)}
+      options={sortedEpics.map((epic) => ({
+        value: epic.id,
+        label: `${epic.id}: ${epic.title}`,
+      }))}
+      placeholder="All Epics"
+      variant="pill"
+      showChevron={true}
+      aria-label="Filter tickets by epic"
+    />
   );
 }

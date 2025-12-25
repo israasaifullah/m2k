@@ -5,7 +5,9 @@ import { EPIC_TEMPLATE, TICKET_TEMPLATE } from "../lib/templates";
 import { validateEpic, validateTicket } from "../lib/validation";
 import { Toast, useToast } from "./Toast";
 import { invoke } from "@tauri-apps/api/core";
-import { FileText, Image, FolderOpen } from "lucide-react";
+import { FileText, Image, FolderOpen, File } from "lucide-react";
+import { Select } from "./Select";
+import { Toggle } from "./Toggle";
 
 interface FileNode {
   name: string;
@@ -139,21 +141,7 @@ function VimToggle() {
   const vimMode = useAppStore((s) => s.vimMode);
   const setVimMode = useAppStore((s) => s.setVimMode);
 
-  return (
-    <button
-      onClick={() => setVimMode(!vimMode)}
-      className={`px-2 py-1 text-xs rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] ${
-        vimMode
-          ? "bg-[var(--geist-success)] text-white"
-          : "border border-[var(--geist-accents-3)] text-[var(--geist-accents-5)] hover:bg-[var(--geist-accents-1)]"
-      }`}
-      aria-pressed={vimMode}
-      aria-label="Toggle vim mode"
-      title={vimMode ? "Vim mode enabled" : "Enable vim mode"}
-    >
-      VIM
-    </button>
-  );
+  return <Toggle checked={vimMode} onChange={setVimMode} label="VIM" showLabel={true} />;
 }
 
 interface DocTypeSelectorProps {
@@ -168,10 +156,10 @@ function DocTypeSelector({ value, onChange, disabled }: DocTypeSelectorProps) {
       <button
         onClick={() => onChange("epic")}
         disabled={disabled}
-        className={`px-3 py-1.5 text-sm rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50 disabled:cursor-not-allowed ${
+        className={`px-3 py-1 text-xs rounded-full transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed ${
           value === "epic"
             ? "bg-[var(--geist-foreground)] text-[var(--geist-background)]"
-            : "border border-[var(--geist-accents-3)] hover:bg-[var(--geist-accents-1)]"
+            : "bg-gradient-to-r from-[var(--geist-accents-2)] to-[var(--geist-accents-1)] border border-[var(--geist-accents-3)] hover:bg-[var(--geist-accents-1)]"
         }`}
         role="radio"
         aria-checked={value === "epic"}
@@ -181,10 +169,10 @@ function DocTypeSelector({ value, onChange, disabled }: DocTypeSelectorProps) {
       <button
         onClick={() => onChange("ticket")}
         disabled={disabled}
-        className={`px-3 py-1.5 text-sm rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50 disabled:cursor-not-allowed ${
+        className={`px-3 py-1 text-xs rounded-full transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed ${
           value === "ticket"
             ? "bg-[var(--geist-foreground)] text-[var(--geist-background)]"
-            : "border border-[var(--geist-accents-3)] hover:bg-[var(--geist-accents-1)]"
+            : "bg-gradient-to-r from-[var(--geist-accents-2)] to-[var(--geist-accents-1)] border border-[var(--geist-accents-3)] hover:bg-[var(--geist-accents-1)]"
         }`}
         role="radio"
         aria-checked={value === "ticket"}
@@ -198,25 +186,26 @@ function DocTypeSelector({ value, onChange, disabled }: DocTypeSelectorProps) {
 interface EpicSelectorProps {
   value: string;
   onChange: (epicId: string) => void;
+  disabled?: boolean;
 }
 
-function EpicSelector({ value, onChange }: EpicSelectorProps) {
+function EpicSelector({ value, onChange, disabled }: EpicSelectorProps) {
   const epics = useAppStore((s) => s.epics);
 
   return (
-    <select
+    <Select
       value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="px-3 py-1 text-sm bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-full focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]"
+      onChange={onChange}
+      options={epics.map((epic) => ({
+        value: epic.id,
+        label: `${epic.id}: ${epic.title}`,
+      }))}
+      placeholder="Select Epic"
+      variant="pill"
+      showChevron={true}
+      disabled={disabled}
       aria-label="Select epic"
-    >
-      <option value="">Select Epic</option>
-      {epics.map((epic) => (
-        <option key={epic.id} value={epic.id}>
-          {epic.id}: {epic.title}
-        </option>
-      ))}
-    </select>
+    />
   );
 }
 
@@ -354,49 +343,58 @@ export function PRDMode() {
 
   return (
     <div className="h-full flex flex-col animate-fade-in">
-      <div className="px-4 py-3 border-b border-[var(--geist-accents-2)] flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-4">
-          <DocTypeSelector
-            value={prdState.docType}
-            onChange={handleDocTypeChange}
-            disabled={isEditing}
-          />
-          {prdState.docType === "ticket" && prdState.mode === "create" && (
-            <EpicSelector value={selectedEpic} onChange={setSelectedEpic} />
-          )}
-          <span className="text-sm text-[var(--geist-accents-5)]">
-            {isEditing ? "Editing" : "New"} {prdState.docType}
-          </span>
-          <VimToggle />
-          <button
-            onClick={() => setShowResourcePicker(true)}
-            className="px-2 py-1 text-xs border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)] transition-colors flex items-center gap-1"
-            title="Insert resource"
-          >
-            <FolderOpen size={14} />
-            Insert Resource
-          </button>
+      <div className="flex items-center justify-center gap-3 py-3 border-b border-[var(--geist-accents-2)]">
+        <DocTypeSelector
+          value={prdState.docType}
+          onChange={handleDocTypeChange}
+          disabled={isEditing}
+        />
+        <EpicSelector
+          value={selectedEpic}
+          onChange={setSelectedEpic}
+          disabled={prdState.docType === "epic" || isEditing}
+        />
+        <div className="px-3 py-1 rounded-full bg-gradient-to-r from-[var(--geist-accents-2)] to-[var(--geist-accents-1)] border border-[var(--geist-accents-3)] flex items-center gap-2">
+          <span className="text-[10px] text-[var(--geist-accents-5)]">{isEditing ? "Editing" : "New"}</span>
+          <span className="text-xs font-semibold text-[var(--geist-foreground)]">{prdState.docType}</span>
         </div>
-        <div className="flex items-center gap-2">
-          {error && (
-            <span className="text-sm text-[var(--geist-error)]">{error}</span>
-          )}
-          <button
-            onClick={handleCancel}
-            disabled={saving}
-            className="px-3 py-1.5 text-sm border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-3 py-1.5 text-sm bg-[var(--geist-success)] text-white rounded-full hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50"
-          >
-            {saving ? "Saving..." : "Save"}
-          </button>
-        </div>
+        <VimToggle />
+        <button
+          onClick={() => setShowResourcePicker(true)}
+          className="px-3 py-1 text-xs bg-gradient-to-r from-[var(--geist-accents-2)] to-[var(--geist-accents-1)] border border-[var(--geist-accents-3)] rounded-full hover:scale-[1.02] transition-all flex items-center gap-1.5"
+          title="Insert resource"
+        >
+          <FolderOpen size={12} />
+          <span>Insert Resource</span>
+        </button>
+        <div className="w-px h-4 bg-[var(--geist-accents-3)]" />
+        {error && (
+          <span className="text-xs text-[var(--geist-error)]">{error}</span>
+        )}
+        <button
+          onClick={handleCancel}
+          disabled={saving}
+          className="px-3 py-1 text-xs border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)] transition-colors disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="px-3 py-1 text-xs bg-[var(--geist-success)] text-white rounded-full hover:opacity-90 transition-opacity disabled:opacity-50"
+        >
+          {saving ? "Saving..." : "Save"}
+        </button>
       </div>
+      {isEditing && prdState.editingPath && (
+        <div className="px-4 py-2 border-b border-[var(--geist-accents-2)] bg-[var(--geist-accents-1)]">
+          <div className="flex items-center gap-2 text-xs">
+            <File size={12} className="text-[var(--geist-accents-5)] flex-shrink-0" />
+            <span className="text-[var(--geist-accents-5)]">Editing:</span>
+            <span className="text-[var(--geist-foreground)] font-mono truncate">{prdState.editingPath}</span>
+          </div>
+        </div>
+      )}
       <div className="flex-1 min-h-0 p-4">
         <MarkdownEditor
           ref={editorRef}
