@@ -214,6 +214,11 @@ export function PRDMode() {
   const setPrdState = useAppStore((s) => s.setPrdState);
   const setViewMode = useAppStore((s) => s.setViewMode);
   const projectPath = useAppStore((s) => s.projectPath);
+  const setTickets = useAppStore((s) => s.setTickets);
+  const setEpics = useAppStore((s) => s.setEpics);
+  const tickets = useAppStore((s) => s.tickets);
+  const epics = useAppStore((s) => s.epics);
+  const setSaveCallback = useAppStore((s) => s.setSaveCallback);
   const [selectedEpic, setSelectedEpic] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -279,6 +284,32 @@ export function PRDMode() {
           path: prdState.editingPath,
           content: prdState.content,
         });
+
+        // Optimistic update - update the ticket/epic in store immediately
+        if (prdState.editingPath.includes("/backlog/") || prdState.editingPath.includes("/inprogress/") || prdState.editingPath.includes("/done/")) {
+          // It's a ticket
+          const titleMatch = prdState.content.match(/^# (T-\d+): (.+)$/m);
+          const id = titleMatch?.[1];
+          const title = titleMatch?.[2]?.trim();
+          if (id && title) {
+            const updatedTickets = tickets.map(t =>
+              t.id === id ? { ...t, title } : t
+            );
+            setTickets(updatedTickets);
+          }
+        } else if (prdState.editingPath.includes("/epics/")) {
+          // It's an epic
+          const titleMatch = prdState.content.match(/^# (EPIC-\d+): (.+)$/m);
+          const id = titleMatch?.[1];
+          const title = titleMatch?.[2]?.trim();
+          if (id && title) {
+            const updatedEpics = epics.map(e =>
+              e.id === id ? { ...e, title } : e
+            );
+            setEpics(updatedEpics);
+          }
+        }
+
         showToast("File saved successfully", "success");
       } else if (prdState.docType === "epic") {
         const nextId = await invoke<number>("get_next_epic_id", {
@@ -296,6 +327,16 @@ export function PRDMode() {
           `EPIC-${paddedId}`
         );
         await invoke("save_markdown_file", { path: filePath, content });
+
+        // Optimistic update - add epic to store immediately
+        const newEpic = {
+          id: `EPIC-${paddedId}`,
+          title: title,
+          path: filePath,
+          status: "todo" as const,
+        };
+        setEpics([...epics, newEpic]);
+
         showToast(`Epic EPIC-${paddedId} created`, "success");
       } else {
         if (!selectedEpic) {
@@ -319,6 +360,19 @@ export function PRDMode() {
           );
         }
         await invoke("save_markdown_file", { path: filePath, content });
+
+        // Optimistic update - add ticket to store immediately
+        const titleMatch = content.match(/^# T-\d+: (.+)$/m);
+        const title = titleMatch?.[1]?.trim() || "Untitled";
+        const newTicket = {
+          id: `T-${paddedId}`,
+          title: title,
+          epic: selectedEpic,
+          status: "backlog" as const,
+          path: filePath,
+        };
+        setTickets([...tickets, newTicket]);
+
         showToast(`Ticket T-${paddedId} created`, "success");
       }
       //setTimeout(() => setViewMode("kanban"), 1000);
@@ -338,6 +392,12 @@ export function PRDMode() {
       setPrdState({ content });
     }
   }, []);
+
+  // Register save callback for vim :w trigger
+  useEffect(() => {
+    setSaveCallback(handleSave);
+    return () => setSaveCallback(null);
+  }, [handleSave, setSaveCallback]);
 
   const isEditing = prdState.mode === "edit";
 

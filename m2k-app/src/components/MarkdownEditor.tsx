@@ -12,6 +12,7 @@ interface Props {
 
 export interface MarkdownEditorHandle {
   insertText: (text: string) => void;
+  triggerSave: () => void;
 }
 
 // Define custom Geist dark theme
@@ -55,6 +56,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
     const vimModeRef = useRef<VimMode | null>(null);
     const statusBarRef = useRef<HTMLDivElement | null>(null);
     const vimEnabled = useAppStore((s) => s.vimMode);
+    const triggerSave = useAppStore((s) => s.triggerSave);
     const [editorReady, setEditorReady] = useState(false);
 
     useImperativeHandle(ref, () => ({
@@ -75,10 +77,34 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         editor.executeEdits("resource-picker", [op]);
         editor.focus();
       },
+      triggerSave: () => {
+        const editor = editorRef.current;
+        if (!editor) return;
+
+        // Trigger Monaco's save action
+        editor.trigger('keyboard', 'editor.action.formatDocument', {});
+        editor.trigger('save', 'editor.action.save', {});
+      },
     }));
 
     const handleEditorMount = (editor: editor.IStandaloneCodeEditor) => {
       editorRef.current = editor;
+
+      // Register save command for vim :w
+      editor.addAction({
+        id: 'vim-save',
+        label: 'Save',
+        keybindings: [],
+        run: () => {
+          // Trigger onChange to ensure content is synced
+          const value = editor.getValue();
+          onChange(value);
+          // Call the registered save callback
+          triggerSave();
+          return null;
+        }
+      });
+
       editor.focus();
       // Delay to ensure status bar is rendered
       setTimeout(() => setEditorReady(true), 0);
@@ -88,7 +114,17 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
     if (!editorReady || !editorRef.current || !statusBarRef.current) return;
 
     if (vimEnabled && !readOnly) {
-      vimModeRef.current = initVimMode(editorRef.current, statusBarRef.current);
+      const vimMode = initVimMode(editorRef.current, statusBarRef.current);
+      vimModeRef.current = vimMode;
+
+      // Access Vim API and define :w command
+      const Vim = (vimMode as any).Vim;
+      if (Vim) {
+        Vim.defineEx('write', 'w', () => {
+          // Trigger save action
+          editorRef.current?.trigger('vim', 'vim-save', {});
+        });
+      }
     } else if (vimModeRef.current) {
       vimModeRef.current.dispose();
       vimModeRef.current = null;

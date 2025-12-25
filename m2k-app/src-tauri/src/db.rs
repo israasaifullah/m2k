@@ -63,6 +63,18 @@ pub fn init_database() -> Result<(), String> {
         [],
     ).map_err(|e| format!("Failed to create app_state table: {}", e))?;
 
+    // Create project_settings table for counters and per-project settings
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS project_settings (
+            project_path TEXT PRIMARY KEY,
+            epic_counter INTEGER NOT NULL DEFAULT 0,
+            ticket_counter INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )",
+        [],
+    ).map_err(|e| format!("Failed to create project_settings table: {}", e))?;
+
     let mut db_conn = DB_CONNECTION.lock().map_err(|e| e.to_string())?;
     *db_conn = Some(conn);
 
@@ -197,5 +209,95 @@ pub fn project_path_exists(path: &str) -> Result<bool, String> {
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(false),
             Err(e) => Err(e),
         }
+    })
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ProjectSettings {
+    pub project_path: String,
+    pub epic_counter: i64,
+    pub ticket_counter: i64,
+}
+
+pub fn init_project_settings(project_path: &str, epic_count: i64, ticket_count: i64) -> Result<(), String> {
+    with_connection(|conn| {
+        conn.execute(
+            "INSERT OR IGNORE INTO project_settings (project_path, epic_counter, ticket_counter)
+             VALUES (?1, ?2, ?3)",
+            rusqlite::params![project_path, epic_count, ticket_count],
+        )?;
+        Ok(())
+    })
+}
+
+pub fn get_project_settings(project_path: &str) -> Result<Option<ProjectSettings>, String> {
+    with_connection(|conn| {
+        let mut stmt = conn.prepare(
+            "SELECT project_path, epic_counter, ticket_counter FROM project_settings WHERE project_path = ?1"
+        )?;
+
+        match stmt.query_row([project_path], |row| {
+            Ok(ProjectSettings {
+                project_path: row.get(0)?,
+                epic_counter: row.get(1)?,
+                ticket_counter: row.get(2)?,
+            })
+        }) {
+            Ok(settings) => Ok(Some(settings)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(e),
+        }
+    })
+}
+
+pub fn get_and_increment_epic_counter(project_path: &str) -> Result<i64, String> {
+    with_connection(|conn| {
+        // Get current counter
+        let current: i64 = conn.query_row(
+            "SELECT epic_counter FROM project_settings WHERE project_path = ?1",
+            [project_path],
+            |row| row.get(0),
+        )?;
+
+        let next = current + 1;
+
+        // Increment counter
+        conn.execute(
+            "UPDATE project_settings SET epic_counter = ?1, updated_at = datetime('now') WHERE project_path = ?2",
+            rusqlite::params![next, project_path],
+        )?;
+
+        Ok(next)
+    })
+}
+
+pub fn get_and_increment_ticket_counter(project_path: &str) -> Result<i64, String> {
+    with_connection(|conn| {
+        // Get current counter
+        let current: i64 = conn.query_row(
+            "SELECT ticket_counter FROM project_settings WHERE project_path = ?1",
+            [project_path],
+            |row| row.get(0),
+        )?;
+
+        let next = current + 1;
+
+        // Increment counter
+        conn.execute(
+            "UPDATE project_settings SET ticket_counter = ?1, updated_at = datetime('now') WHERE project_path = ?2",
+            rusqlite::params![next, project_path],
+        )?;
+
+        Ok(next)
+    })
+}
+
+pub fn update_project_counters(project_path: &str, epic_counter: i64, ticket_counter: i64) -> Result<(), String> {
+    with_connection(|conn| {
+        conn.execute(
+            "UPDATE project_settings SET epic_counter = ?1, ticket_counter = ?2, updated_at = datetime('now') WHERE project_path = ?3",
+            rusqlite::params![epic_counter, ticket_counter, project_path],
+        )?;
+        Ok(())
     })
 }

@@ -4,30 +4,52 @@ import { useAppStore } from "../lib/store";
 import { Toast, useToast } from "./Toast";
 import { Toggle } from "./Toggle";
 
+interface ProjectSettings {
+  project_path: string;
+  epic_counter: number;
+  ticket_counter: number;
+}
+
 export function SettingsPage() {
   const setViewMode = useAppStore((s) => s.setViewMode);
   const vimMode = useAppStore((s) => s.vimMode);
   const setVimMode = useAppStore((s) => s.setVimMode);
+  const projectPath = useAppStore((s) => s.projectPath);
   const [apiKey, setApiKey] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [hasExistingKey, setHasExistingKey] = useState(false);
+  const [projectSettings, setProjectSettings] = useState<ProjectSettings | null>(null);
+  const [epicCounter, setEpicCounter] = useState(0);
+  const [ticketCounter, setTicketCounter] = useState(0);
   const { toast, showToast, hideToast } = useToast();
 
   useEffect(() => {
-    const checkExistingKey = async () => {
+    const init = async () => {
       try {
         const exists = await invoke<boolean>("has_api_key");
         setHasExistingKey(exists);
+
+        // Load project settings if project is loaded
+        if (projectPath) {
+          const settings = await invoke<ProjectSettings | null>("get_project_settings", {
+            projectPath,
+          });
+          if (settings) {
+            setProjectSettings(settings);
+            setEpicCounter(settings.epic_counter);
+            setTicketCounter(settings.ticket_counter);
+          }
+        }
       } catch (err) {
-        console.error("Failed to check API key:", err);
+        console.error("Failed to load settings:", err);
       } finally {
         setLoading(false);
       }
     };
-    checkExistingKey();
-  }, []);
+    init();
+  }, [projectPath]);
 
   const handleCancel = () => {
     setViewMode("kanban");
@@ -71,6 +93,25 @@ export function SettingsPage() {
       setHasExistingKey(false);
       setApiKey("");
       showToast("API key cleared", "success");
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      showToast(errMsg, "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdateCounters = async () => {
+    if (!projectPath) return;
+
+    setSaving(true);
+    try {
+      await invoke("update_project_counters", {
+        projectPath,
+        epicCounter,
+        ticketCounter,
+      });
+      showToast("Counters updated successfully", "success");
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       showToast(errMsg, "error");
@@ -209,6 +250,62 @@ export function SettingsPage() {
               />
             </div>
           </div>
+
+          {/* Project Counters */}
+          {projectPath && projectSettings && (
+            <div className="bg-[var(--geist-accents-1)] border border-[var(--geist-accents-2)] rounded-lg p-4">
+              <h2 className="text-base font-medium text-[var(--geist-foreground)] mb-4">
+                Project Counters
+              </h2>
+              <p className="text-sm text-[var(--geist-accents-5)] mb-4">
+                Override the next ID counters for epics and tickets. The system will use these values for new creations.
+              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="epic-counter" className="text-sm font-medium text-[var(--geist-foreground)] block mb-2">
+                    Next Epic ID
+                  </label>
+                  <input
+                    id="epic-counter"
+                    type="number"
+                    min="0"
+                    value={epicCounter}
+                    onChange={(e) => setEpicCounter(parseInt(e.target.value) || 0)}
+                    className="w-full p-3 text-sm bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]"
+                  />
+                  <p className="text-xs text-[var(--geist-accents-4)] mt-1">
+                    Next epic will be: EPIC-{String(epicCounter + 1).padStart(3, '0')}
+                  </p>
+                </div>
+
+                <div>
+                  <label htmlFor="ticket-counter" className="text-sm font-medium text-[var(--geist-foreground)] block mb-2">
+                    Next Ticket ID
+                  </label>
+                  <input
+                    id="ticket-counter"
+                    type="number"
+                    min="0"
+                    value={ticketCounter}
+                    onChange={(e) => setTicketCounter(parseInt(e.target.value) || 0)}
+                    className="w-full p-3 text-sm bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]"
+                  />
+                  <p className="text-xs text-[var(--geist-accents-4)] mt-1">
+                    Next ticket will be: T-{String(ticketCounter + 1).padStart(3, '0')}
+                  </p>
+                </div>
+
+                <button
+                  onClick={handleUpdateCounters}
+                  disabled={saving}
+                  className="px-4 py-2 text-sm bg-[var(--geist-success)] text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {saving ? "Updating..." : "Update Counters"}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Info Section */}
           <div className="bg-[var(--geist-accents-1)] border border-[var(--geist-accents-2)] rounded-lg p-4">

@@ -17,6 +17,7 @@ export function Sidebar() {
   const activeProjectId = useAppStore((s) => s.activeProjectId);
   const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed);
   const setSidebarCollapsed = useAppStore((s) => s.setSidebarCollapsed);
+  const triggerSave = useAppStore((s) => s.triggerSave);
   const { selectFolder, switchToProject, removeProject, renameProject, validateProjectPath } = useProjectLoader();
   const [projectsExpanded, setProjectsExpanded] = useState(true);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -53,6 +54,7 @@ export function Sidebar() {
   };
 
   const handleCreateNew = () => {
+    triggerSave();
     resetPrdState();
     setViewMode("prd");
   };
@@ -62,6 +64,7 @@ export function Sidebar() {
   };
 
   const handleResources = () => {
+    triggerSave();
     setViewMode("resources");
   };
 

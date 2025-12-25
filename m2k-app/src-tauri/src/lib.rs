@@ -175,31 +175,50 @@ fn read_image_as_base64(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-fn get_next_epic_id(project_path: String) -> Result<u32, String> {
-    let epics = parser::parse_epics(&project_path)?;
-    let max_id = epics
-        .iter()
-        .filter_map(|e| {
-            e.id.strip_prefix("EPIC-")
-                .and_then(|s| s.parse::<u32>().ok())
-        })
-        .max()
-        .unwrap_or(0);
-    Ok(max_id + 1)
+fn get_next_epic_id(project_path: String) -> Result<i64, String> {
+    db::get_and_increment_epic_counter(&project_path)
 }
 
 #[tauri::command]
-fn get_next_ticket_id(project_path: String) -> Result<u32, String> {
+fn get_next_ticket_id(project_path: String) -> Result<i64, String> {
+    db::get_and_increment_ticket_counter(&project_path)
+}
+
+#[tauri::command]
+fn init_project_counters(project_path: String) -> Result<(), String> {
+    // Scan existing files to determine initial counters
+    let epics = parser::parse_epics(&project_path)?;
     let tickets = parser::parse_tickets(&project_path)?;
-    let max_id = tickets
+
+    let max_epic_id = epics
         .iter()
-        .filter_map(|t| {
-            t.id.strip_prefix("T-")
-                .and_then(|s| s.parse::<u32>().ok())
+        .filter_map(|e| {
+            e.id.strip_prefix("EPIC-")
+                .and_then(|s| s.parse::<i64>().ok())
         })
         .max()
         .unwrap_or(0);
-    Ok(max_id + 1)
+
+    let max_ticket_id = tickets
+        .iter()
+        .filter_map(|t| {
+            t.id.strip_prefix("T-")
+                .and_then(|s| s.parse::<i64>().ok())
+        })
+        .max()
+        .unwrap_or(0);
+
+    db::init_project_settings(&project_path, max_epic_id, max_ticket_id)
+}
+
+#[tauri::command]
+fn get_project_settings(project_path: String) -> Result<Option<db::ProjectSettings>, String> {
+    db::get_project_settings(&project_path)
+}
+
+#[tauri::command]
+fn update_project_counters(project_path: String, epic_counter: i64, ticket_counter: i64) -> Result<(), String> {
+    db::update_project_counters(&project_path, epic_counter, ticket_counter)
 }
 
 
@@ -711,6 +730,9 @@ pub fn run() {
             read_image_as_base64,
             get_next_epic_id,
             get_next_ticket_id,
+            init_project_counters,
+            get_project_settings,
+            update_project_counters,
             move_ticket_to_status,
             update_epic_ticket_status,
             spawn_pty,

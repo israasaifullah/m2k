@@ -1,9 +1,10 @@
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open, confirm } from "@tauri-apps/plugin-dialog";
 import { useAppStore, RegisteredProject } from "../lib/store";
 import { loadConfig, saveConfig } from "../lib/config";
+import { debounce } from "../lib/debounce";
 import type { Ticket, Epic } from "../types";
 
 export function useProjectLoader() {
@@ -39,6 +40,14 @@ export function useProjectLoader() {
 
       const m2kPath = `${path}`;
       console.log("Loading project from:", m2kPath);
+
+      // Initialize project counters if not already initialized
+      try {
+        await invoke("init_project_counters", { projectPath: m2kPath });
+      } catch (e) {
+        console.warn("Failed to initialize project counters:", e);
+      }
+
       const [tickets, epics] = await Promise.all([
         invoke<Ticket[]>("parse_tickets", { path: m2kPath }),
         invoke<Epic[]>("parse_epics", { path: m2kPath }),
@@ -306,18 +315,28 @@ export function useProjectLoader() {
     persistSidebar();
   }, [sidebarCollapsed]);
 
+  // Debounced reload to prevent excessive reloads
+  const debouncedLoadProject = useMemo(
+    () => debounce((path: string) => {
+      console.log("Debounced reload triggered");
+      loadProject(path);
+    }, 1000),
+    [loadProject]
+  );
+
   // Listen for file changes
   useEffect(() => {
     if (!projectPath) return;
 
     const unlisten = listen("file-change", () => {
-      loadProject(projectPath);
+      console.log("File change detected, scheduling reload...");
+      debouncedLoadProject(projectPath);
     });
 
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [projectPath, loadProject]);
+  }, [projectPath, debouncedLoadProject]);
 
   return {
     selectFolder,

@@ -31,6 +31,7 @@ interface AppState {
   registeredProjects: RegisteredProject[];
   activeProjectId: number | null;
   sidebarCollapsed: boolean;
+  saveCallback: (() => void) | null;
   setTickets: (tickets: Ticket[]) => void;
   setEpics: (epics: Epic[]) => void;
   setSelectedEpic: (epicId: string | null) => void;
@@ -43,6 +44,8 @@ interface AppState {
   setRegisteredProjects: (projects: RegisteredProject[]) => void;
   setActiveProjectId: (id: number | null) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
+  setSaveCallback: (callback: (() => void) | null) => void;
+  triggerSave: () => void;
 }
 
 const defaultPrdState: PrdState = {
@@ -64,6 +67,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   registeredProjects: [],
   activeProjectId: null,
   sidebarCollapsed: false,
+  saveCallback: null,
   setTickets: (tickets) => set({ tickets }),
   setEpics: (epics) => set({ epics }),
   setSelectedEpic: (epicId) => set({ selectedEpic: epicId }),
@@ -80,4 +84,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   setRegisteredProjects: (projects) => set({ registeredProjects: projects }),
   setActiveProjectId: (id) => set({ activeProjectId: id }),
   setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+  setSaveCallback: (callback) => set({ saveCallback: callback }),
+  triggerSave: () => {
+    const { saveCallback } = get();
+    if (saveCallback) {
+      saveCallback();
+    }
+  },
 }));

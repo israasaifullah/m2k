@@ -118,6 +118,7 @@ interface FilePreviewProps {
 }
 
 function FilePreview({ path }: FilePreviewProps) {
+  const setSaveCallback = useAppStore((s) => s.setSaveCallback);
   const [content, setContent] = useState<string | null>(null);
   const [imageData, setImageData] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -185,6 +186,12 @@ function FilePreview({ path }: FilePreviewProps) {
     setEditContent(value);
     setHasChanges(value !== content);
   };
+
+  // Register save callback for vim :w trigger
+  useEffect(() => {
+    setSaveCallback(handleSave);
+    return () => setSaveCallback(null);
+  }, [handleSave, setSaveCallback]);
 
   const ext = path.split('.').pop()?.toLowerCase();
   const isImage = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext || '');
@@ -744,6 +751,7 @@ function DeleteDialog({ node, onClose, onSuccess }: DeleteDialogProps) {
 
 export function ResourceBoard() {
   const projectPath = useAppStore((s) => s.projectPath);
+  const setSaveCallback = useAppStore((s) => s.setSaveCallback);
   const [tree, setTree] = useState<FileNode | null>(null);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [selectedIsDirectory, setSelectedIsDirectory] = useState(false);
