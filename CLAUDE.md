@@ -30,7 +30,6 @@ backlog/ → inprogress/ → done/
 * On ticket completion: move ticket → `.m2k/done`
 * After EPIC completion: **clear working context**
 
-
 ## Branching Strategy 
 CASE 1: On full EPIC request
     - create an epic branch `feature/{epic_tag}/{description}`.
@@ -41,7 +40,7 @@ CASE 2: On single TICKET request
 
 **Tickets act as execution checkpoints.**
 
-For each ticket:
+After any ticket completions:
 
 1. Checkout target branch
 2. Commit changes
@@ -54,6 +53,9 @@ For each ticket:
 feat: description (T-XXX)
 fix: description (T-XXX)
 ```
+
+### Tests 
+- Run a build/compile test to ensure there is no error before making any commit/push to the repository.
 
 ### Clean Code Conventions
 1. Multi-line business logic inside conditional blocks must be extracted into named routines.

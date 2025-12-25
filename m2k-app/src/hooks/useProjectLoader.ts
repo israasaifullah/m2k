@@ -324,19 +324,34 @@ export function useProjectLoader() {
     [loadProject]
   );
 
+  // Debounced stats sync
+  const debouncedSyncStats = useMemo(
+    () => debounce(async (path: string) => {
+      console.log("Syncing stats from files...");
+      try {
+        await invoke("sync_stats_from_files", { projectPath: path });
+        console.log("Stats synced successfully");
+      } catch (e) {
+        console.error("Failed to sync stats:", e);
+      }
+    }, 1000),
+    []
+  );
+
   // Listen for file changes
   useEffect(() => {
     if (!projectPath) return;
 
     const unlisten = listen("file-change", () => {
-      console.log("File change detected, scheduling reload...");
+      console.log("File change detected, scheduling reload and stats sync...");
       debouncedLoadProject(projectPath);
+      debouncedSyncStats(projectPath);
     });
 
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [projectPath, debouncedLoadProject]);
+  }, [projectPath, debouncedLoadProject, debouncedSyncStats]);
 
   return {
     selectFolder,

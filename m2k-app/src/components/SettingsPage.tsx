@@ -8,6 +8,12 @@ interface ProjectSettings {
   project_path: string;
   epic_counter: number;
   ticket_counter: number;
+  total_epics: number;
+  completed_epics: number;
+  total_tickets: number;
+  backlog_tickets: number;
+  inprogress_tickets: number;
+  done_tickets: number;
 }
 
 export function SettingsPage() {
@@ -112,6 +118,32 @@ export function SettingsPage() {
         ticketCounter,
       });
       showToast("Counters updated successfully", "success");
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      showToast(errMsg, "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSyncStats = async () => {
+    if (!projectPath) return;
+
+    setSaving(true);
+    try {
+      await invoke("sync_stats_from_files", { projectPath });
+
+      // Refresh settings to show updated stats
+      const settings = await invoke<ProjectSettings | null>("get_project_settings", {
+        projectPath,
+      });
+      if (settings) {
+        setProjectSettings(settings);
+        setEpicCounter(settings.epic_counter);
+        setTicketCounter(settings.ticket_counter);
+      }
+
+      showToast("Stats synced from files successfully", "success");
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       showToast(errMsg, "error");
@@ -255,11 +287,55 @@ export function SettingsPage() {
           {projectPath && projectSettings && (
             <div className="bg-[var(--geist-accents-1)] border border-[var(--geist-accents-2)] rounded-lg p-4">
               <h2 className="text-base font-medium text-[var(--geist-foreground)] mb-4">
-                Project Counters
+                Project Counters & Stats
               </h2>
               <p className="text-sm text-[var(--geist-accents-5)] mb-4">
-                Override the next ID counters for epics and tickets. The system will use these values for new creations.
+                Manage ID counters and view/sync project statistics.
               </p>
+
+              {/* Current Stats Display */}
+              <div className="mb-4 p-3 bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg">
+                <h3 className="text-sm font-medium text-[var(--geist-foreground)] mb-2">Current Stats</h3>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-[var(--geist-accents-5)]">Epics:</span>{" "}
+                    <span className="text-[var(--geist-foreground)] font-medium">
+                      {projectSettings.completed_epics}/{projectSettings.total_epics}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[var(--geist-accents-5)]">Tickets:</span>{" "}
+                    <span className="text-[var(--geist-foreground)] font-medium">
+                      {projectSettings.total_tickets}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[var(--geist-accents-5)]">Backlog:</span>{" "}
+                    <span className="text-[var(--geist-foreground)] font-medium">
+                      {projectSettings.backlog_tickets}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[var(--geist-accents-5)]">In Progress:</span>{" "}
+                    <span className="text-[var(--geist-foreground)] font-medium">
+                      {projectSettings.inprogress_tickets}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[var(--geist-accents-5)]">Done:</span>{" "}
+                    <span className="text-[var(--geist-foreground)] font-medium">
+                      {projectSettings.done_tickets}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={handleSyncStats}
+                  disabled={saving}
+                  className="mt-3 w-full px-3 py-1.5 text-xs border border-[var(--geist-accents-3)] rounded-lg hover:bg-[var(--geist-accents-1)] transition-colors disabled:opacity-50"
+                >
+                  {saving ? "Syncing..." : "Sync Stats from Files"}
+                </button>
+              </div>
 
               <div className="space-y-4">
                 <div>

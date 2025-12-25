@@ -69,11 +69,31 @@ pub fn init_database() -> Result<(), String> {
             project_path TEXT PRIMARY KEY,
             epic_counter INTEGER NOT NULL DEFAULT 0,
             ticket_counter INTEGER NOT NULL DEFAULT 0,
+            total_epics INTEGER NOT NULL DEFAULT 0,
+            completed_epics INTEGER NOT NULL DEFAULT 0,
+            total_tickets INTEGER NOT NULL DEFAULT 0,
+            backlog_tickets INTEGER NOT NULL DEFAULT 0,
+            inprogress_tickets INTEGER NOT NULL DEFAULT 0,
+            done_tickets INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             updated_at TEXT NOT NULL DEFAULT (datetime('now'))
         )",
         [],
     ).map_err(|e| format!("Failed to create project_settings table: {}", e))?;
+
+    // Migrate existing tables: add stats columns if missing
+    let migrations = [
+        "ALTER TABLE project_settings ADD COLUMN total_epics INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE project_settings ADD COLUMN completed_epics INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE project_settings ADD COLUMN total_tickets INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE project_settings ADD COLUMN backlog_tickets INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE project_settings ADD COLUMN inprogress_tickets INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE project_settings ADD COLUMN done_tickets INTEGER NOT NULL DEFAULT 0",
+    ];
+
+    for migration in &migrations {
+        let _ = conn.execute(migration, []);
+    }
 
     let mut db_conn = DB_CONNECTION.lock().map_err(|e| e.to_string())?;
     *db_conn = Some(conn);
@@ -81,7 +101,7 @@ pub fn init_database() -> Result<(), String> {
     Ok(())
 }
 
-fn with_connection<T, F>(f: F) -> Result<T, String>
+pub fn with_connection<T, F>(f: F) -> Result<T, String>
 where
     F: FnOnce(&Connection) -> SqliteResult<T>,
 {
@@ -217,6 +237,12 @@ pub struct ProjectSettings {
     pub project_path: String,
     pub epic_counter: i64,
     pub ticket_counter: i64,
+    pub total_epics: i64,
+    pub completed_epics: i64,
+    pub total_tickets: i64,
+    pub backlog_tickets: i64,
+    pub inprogress_tickets: i64,
+    pub done_tickets: i64,
 }
 
 pub fn init_project_settings(project_path: &str, epic_count: i64, ticket_count: i64) -> Result<(), String> {
@@ -233,7 +259,9 @@ pub fn init_project_settings(project_path: &str, epic_count: i64, ticket_count: 
 pub fn get_project_settings(project_path: &str) -> Result<Option<ProjectSettings>, String> {
     with_connection(|conn| {
         let mut stmt = conn.prepare(
-            "SELECT project_path, epic_counter, ticket_counter FROM project_settings WHERE project_path = ?1"
+            "SELECT project_path, epic_counter, ticket_counter, total_epics, completed_epics,
+                    total_tickets, backlog_tickets, inprogress_tickets, done_tickets
+             FROM project_settings WHERE project_path = ?1"
         )?;
 
         match stmt.query_row([project_path], |row| {
@@ -241,6 +269,12 @@ pub fn get_project_settings(project_path: &str) -> Result<Option<ProjectSettings
                 project_path: row.get(0)?,
                 epic_counter: row.get(1)?,
                 ticket_counter: row.get(2)?,
+                total_epics: row.get(3)?,
+                completed_epics: row.get(4)?,
+                total_tickets: row.get(5)?,
+                backlog_tickets: row.get(6)?,
+                inprogress_tickets: row.get(7)?,
+                done_tickets: row.get(8)?,
             })
         }) {
             Ok(settings) => Ok(Some(settings)),
@@ -297,6 +331,98 @@ pub fn update_project_counters(project_path: &str, epic_counter: i64, ticket_cou
         conn.execute(
             "UPDATE project_settings SET epic_counter = ?1, ticket_counter = ?2, updated_at = datetime('now') WHERE project_path = ?3",
             rusqlite::params![epic_counter, ticket_counter, project_path],
+        )?;
+        Ok(())
+    })
+}
+
+pub fn increment_epic_stats(project_path: &str) -> Result<(), String> {
+    with_connection(|conn| {
+        conn.execute(
+            "UPDATE project_settings
+             SET total_epics = total_epics + 1,
+                 updated_at = datetime('now')
+             WHERE project_path = ?1",
+            [project_path],
+        )?;
+        Ok(())
+    })
+}
+
+pub fn increment_ticket_stats(project_path: &str, status: &str) -> Result<(), String> {
+    let status_col = match status {
+        "backlog" => "backlog_tickets",
+        "in_progress" => "inprogress_tickets",
+        "done" => "done_tickets",
+        _ => return Err(format!("Invalid status: {}", status)),
+    };
+
+    with_connection(|conn| {
+        conn.execute(
+            &format!(
+                "UPDATE project_settings
+                 SET total_tickets = total_tickets + 1,
+                     {} = {} + 1,
+                     updated_at = datetime('now')
+                 WHERE project_path = ?1",
+                status_col, status_col
+            ),
+            [project_path],
+        )?;
+        Ok(())
+    })
+}
+
+pub fn update_ticket_status_stats(
+    project_path: &str,
+    old_status: &str,
+    new_status: &str,
+) -> Result<(), String> {
+    if old_status == new_status {
+        return Ok(());
+    }
+
+    let old_col = match old_status {
+        "backlog" => "backlog_tickets",
+        "in_progress" => "inprogress_tickets",
+        "done" => "done_tickets",
+        _ => return Err(format!("Invalid old_status: {}", old_status)),
+    };
+
+    let new_col = match new_status {
+        "backlog" => "backlog_tickets",
+        "in_progress" => "inprogress_tickets",
+        "done" => "done_tickets",
+        _ => return Err(format!("Invalid new_status: {}", new_status)),
+    };
+
+    with_connection(|conn| {
+        conn.execute(
+            &format!(
+                "UPDATE project_settings
+                 SET {} = {} - 1,
+                     {} = {} + 1,
+                     updated_at = datetime('now')
+                 WHERE project_path = ?1",
+                old_col, old_col, new_col, new_col
+            ),
+            [project_path],
+        )?;
+        Ok(())
+    })
+}
+
+pub fn update_epic_completion_stats(
+    project_path: &str,
+    completed_delta: i64,
+) -> Result<(), String> {
+    with_connection(|conn| {
+        conn.execute(
+            "UPDATE project_settings
+             SET completed_epics = completed_epics + ?1,
+                 updated_at = datetime('now')
+             WHERE project_path = ?2",
+            rusqlite::params![completed_delta, project_path],
         )?;
         Ok(())
     })

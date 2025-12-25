@@ -5,7 +5,7 @@ import { EPIC_TEMPLATE, TICKET_TEMPLATE } from "../lib/templates";
 import { validateEpic, validateTicket } from "../lib/validation";
 import { Toast, useToast } from "./Toast";
 import { invoke } from "@tauri-apps/api/core";
-import { FileText, Image, FolderOpen, File } from "lucide-react";
+import { FileText, Image, FolderOpen, File, Save } from "lucide-react";
 import { Select } from "./Select";
 import { Toggle } from "./Toggle";
 
@@ -434,15 +434,16 @@ export function PRDMode() {
         <button
           onClick={handleCancel}
           disabled={saving}
-          className="px-3 py-1 text-xs border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)] transition-colors disabled:opacity-50"
+          className="px-3 py-1 text-sm border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)] transition-colors disabled:opacity-50"
         >
           Cancel
         </button>
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-3 py-1 text-xs bg-[var(--geist-success)] text-white rounded-full hover:opacity-90 transition-opacity disabled:opacity-50"
+          className="px-3 py-1 text-sm bg-[var(--geist-success)] text-white rounded-full hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-1"
         >
+          <Save size={14} />
           {saving ? "Saving..." : "Save"}
         </button>
       </div>

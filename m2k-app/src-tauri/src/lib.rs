@@ -176,12 +176,18 @@ fn read_image_as_base64(path: String) -> Result<String, String> {
 
 #[tauri::command]
 fn get_next_epic_id(project_path: String) -> Result<i64, String> {
-    db::get_and_increment_epic_counter(&project_path)
+    let next = db::get_and_increment_epic_counter(&project_path)?;
+    // Increment stats
+    db::increment_epic_stats(&project_path)?;
+    Ok(next)
 }
 
 #[tauri::command]
 fn get_next_ticket_id(project_path: String) -> Result<i64, String> {
-    db::get_and_increment_ticket_counter(&project_path)
+    let next = db::get_and_increment_ticket_counter(&project_path)?;
+    // New tickets start in backlog
+    db::increment_ticket_stats(&project_path, "backlog")?;
+    Ok(next)
 }
 
 #[tauri::command]
@@ -208,7 +214,46 @@ fn init_project_counters(project_path: String) -> Result<(), String> {
         .max()
         .unwrap_or(0);
 
-    db::init_project_settings(&project_path, max_epic_id, max_ticket_id)
+    db::init_project_settings(&project_path, max_epic_id, max_ticket_id)?;
+
+    // Also sync stats
+    sync_stats_from_files(project_path)
+}
+
+#[tauri::command]
+fn sync_stats_from_files(project_path: String) -> Result<(), String> {
+    let tickets = parser::parse_tickets(&project_path)?;
+    let epics = parser::parse_epics(&project_path)?;
+
+    // Count tickets by status
+    let backlog = tickets.iter().filter(|t| t.status == "backlog").count() as i64;
+    let inprogress = tickets.iter().filter(|t| t.status == "in_progress").count() as i64;
+    let done = tickets.iter().filter(|t| t.status == "done").count() as i64;
+
+    // Calculate completed epics (all tickets done)
+    let completed = epics.iter().filter(|epic| {
+        let epic_tickets: Vec<_> = tickets.iter()
+            .filter(|t| t.epic == epic.id)
+            .collect();
+        !epic_tickets.is_empty() && epic_tickets.iter().all(|t| t.status == "done")
+    }).count() as i64;
+
+    // Update all stats in DB
+    db::with_connection(|conn| {
+        conn.execute(
+            "UPDATE project_settings
+             SET total_epics = ?1, completed_epics = ?2,
+                 total_tickets = ?3, backlog_tickets = ?4,
+                 inprogress_tickets = ?5, done_tickets = ?6,
+                 updated_at = datetime('now')
+             WHERE project_path = ?7",
+            rusqlite::params![
+                epics.len() as i64, completed, tickets.len() as i64,
+                backlog, inprogress, done, &project_path
+            ],
+        )?;
+        Ok(())
+    }).map_err(|e| format!("Failed to sync stats: {}", e))
 }
 
 #[tauri::command]
@@ -731,6 +776,7 @@ pub fn run() {
             get_next_epic_id,
             get_next_ticket_id,
             init_project_counters,
+            sync_stats_from_files,
             get_project_settings,
             update_project_counters,
             move_ticket_to_status,
