@@ -25,14 +25,9 @@ backlog/ → inprogress/ → done/
 
 ## Working on an EPIC
 - When assign to an epic, find all the tickets related to that epic, work on it 1 by 1 and update the ticket status. 
-- When you start working on a ticket, put it in the inprogress folder first
-- If complete, can move the ticket into the /done folder. 
-- Clear the context after every epic work.
-
-## When working on a TICKET 
 - When assign to a ticket, work on that particular ticket alone.
-- When you start working on a ticket, put it in the inprogress folder first
-- If complete, can move the ticket into the /done folder. 
+- When you start working on a ticket, put it in the `.m2k/inprogress` folder first
+- If complete, can move the ticket into the `.m2k/done` folder. 
 - Clear the context after every epic work.
 
 ## Branching Strategy 
@@ -44,6 +39,7 @@ backlog/ → inprogress/ → done/
     - commit & push the code
     - push upstream if necessary
 - Include ticket reference in commit messages:
+
 ```
 feat: description (T-XXX)
 fix: description (T-XXX)
