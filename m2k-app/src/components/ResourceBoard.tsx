@@ -749,6 +749,36 @@ export function ResourceBoard() {
     }
   }, [projectPath]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+Shift+C on Mac, Ctrl+Shift+C on Windows/Linux
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'c') {
+        e.preventDefault();
+        if (selectedPath && tree) {
+          // Find the node by path
+          const findNode = (node: FileNode): FileNode | null => {
+            if (node.path === selectedPath) return node;
+            if (node.children) {
+              for (const child of node.children) {
+                const found = findNode(child);
+                if (found) return found;
+              }
+            }
+            return null;
+          };
+
+          const node = findNode(tree);
+          if (node) {
+            handleCopyPath(node);
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedPath, tree]);
+
   const loadResourceTree = async () => {
     if (!projectPath) return;
 
