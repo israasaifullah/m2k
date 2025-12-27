@@ -109,8 +109,12 @@ pub fn spawn_pty(app: AppHandle, working_dir: String, cols: u16, rows: u16) -> R
                         Duration::from_millis(100) // Heavy throttle
                     };
 
-                    // Emit when delay elapsed OR batch exceeds 32KB
-                    if last_emit.elapsed() >= emit_delay || batch.len() > 32768 {
+                    // Immediate emit for interactive commands (low throughput + newline)
+                    let has_newline = batch.contains('\n');
+                    let is_interactive = bytes_per_sec < 50_000 && has_newline;
+
+                    // Emit when: interactive mode OR delay elapsed OR batch >32KB
+                    if is_interactive || last_emit.elapsed() >= emit_delay || batch.len() > 32768 {
                         let _ = app_clone.emit(&format!("pty-output-{}", pty_id_clone), batch.clone());
                         batch.clear();
                         last_emit = Instant::now();
