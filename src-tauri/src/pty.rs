@@ -1,5 +1,5 @@
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::io::{Read, Write};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -78,6 +78,7 @@ pub fn spawn_pty(app: AppHandle, working_dir: String, cols: u16, rows: u16) -> R
         let mut buf = [0u8; 8192]; // Increased buffer size
         let mut batch = String::new();
         let mut last_emit = Instant::now();
+        let mut recent_bytes: VecDeque<(Instant, usize)> = VecDeque::new();
 
         loop {
             match reader.read(&mut buf) {
@@ -91,6 +92,13 @@ pub fn spawn_pty(app: AppHandle, working_dir: String, cols: u16, rows: u16) -> R
                 }
                 Ok(n) => {
                     batch.push_str(&String::from_utf8_lossy(&buf[..n]));
+
+                    // Track bytes in sliding window (last 1 second)
+                    recent_bytes.push_back((Instant::now(), n));
+                    recent_bytes.retain(|(t, _)| t.elapsed() < Duration::from_secs(1));
+
+                    // Calculate bytes per second
+                    let bytes_per_sec: usize = recent_bytes.iter().map(|(_, b)| b).sum();
 
                     // Emit every 50ms OR when batch exceeds 32KB
                     if last_emit.elapsed() > Duration::from_millis(50) || batch.len() > 32768 {
