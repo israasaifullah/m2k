@@ -788,6 +788,13 @@ fn sync_m2k_backup(project_path: String) -> Result<String, String> {
 
     let project_name = extract_project_name(&project_path);
     let project_backup_folder = generate_unique_project_folder(backup_base_path, &project_name);
+
+    // Create project folder structure in backup destination
+    if !project_backup_folder.exists() {
+        fs::create_dir_all(&project_backup_folder)
+            .map_err(|e| format!("Failed to create project backup folder: {}", e))?;
+    }
+
     let m2k_destination = project_backup_folder.join(".m2k");
 
     if m2k_destination.exists() {
