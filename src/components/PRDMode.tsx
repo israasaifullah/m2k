@@ -406,7 +406,15 @@ export function PRDMode() {
     if (prdState.mode === "create" && prdState.docType === "ticket" && globalSelectedEpic) {
       setSelectedEpic(globalSelectedEpic);
     }
-  }, [prdState.mode, prdState.docType, globalSelectedEpic]);
+
+    // Extract epic from content when editing a ticket
+    if (prdState.mode === "edit" && prdState.docType === "ticket" && prdState.content) {
+      const epicMatch = prdState.content.match(/\*\*Epic:\*\* (EPIC-\d+)/);
+      if (epicMatch) {
+        setSelectedEpic(epicMatch[1]);
+      }
+    }
+  }, [prdState.mode, prdState.docType, prdState.content, globalSelectedEpic]);
 
   // Register save callback for vim :w trigger
   useEffect(() => {
