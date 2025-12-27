@@ -2,6 +2,7 @@ use rusqlite::{Connection, Result as SqliteResult};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Mutex;
+use crate::parser::{Epic, Ticket};
 
 lazy_static::lazy_static! {
     static ref DB_CONNECTION: Mutex<Option<Connection>> = Mutex::new(None);
@@ -487,4 +488,116 @@ pub fn set_backup_path(project_path: &str, backup_path: &str) -> Result<(), Stri
 
 pub fn get_backup_path(project_path: &str) -> Result<Option<String>, String> {
     get_app_state(&format!("backup_path:{}", project_path))
+}
+
+// Epic and Ticket snapshot CRUD operations
+pub fn upsert_epic(epic: &Epic, file_path: &str) -> Result<(), String> {
+    with_connection(|conn| {
+        conn.execute(
+            "INSERT OR REPLACE INTO epics (epic_id, title, scope, file_path, updated_at)
+             VALUES (?1, ?2, ?3, ?4, datetime('now'))",
+            rusqlite::params![epic.id, epic.title, epic.scope, file_path],
+        )?;
+        Ok(())
+    })
+}
+
+pub fn upsert_ticket(ticket: &Ticket) -> Result<(), String> {
+    with_connection(|conn| {
+        conn.execute(
+            "INSERT OR REPLACE INTO tickets
+             (ticket_id, epic_id, title, description, status, file_path, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, datetime('now'))",
+            rusqlite::params![
+                ticket.id,
+                if ticket.epic.is_empty() { None } else { Some(&ticket.epic) },
+                ticket.title,
+                ticket.description,
+                ticket.status,
+                ticket.file_path
+            ],
+        )?;
+        Ok(())
+    })
+}
+
+pub fn get_all_epics_snapshot(project_path: &str) -> Result<Vec<Epic>, String> {
+    with_connection(|conn| {
+        let mut stmt = conn.prepare(
+            "SELECT epic_id, title, scope FROM epics WHERE file_path LIKE ?1"
+        )?;
+
+        let pattern = format!("{}%", project_path);
+        let epics = stmt.query_map([pattern], |row| {
+            Ok(Epic {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                scope: row.get(2)?,
+                tickets: Vec::new(),
+            })
+        })?;
+
+        epics.collect()
+    })
+}
+
+pub fn get_all_tickets_snapshot(project_path: &str) -> Result<Vec<Ticket>, String> {
+    with_connection(|conn| {
+        let mut stmt = conn.prepare(
+            "SELECT ticket_id, epic_id, title, description, status, file_path
+             FROM tickets WHERE file_path LIKE ?1"
+        )?;
+
+        let pattern = format!("{}%", project_path);
+        let tickets = stmt.query_map([pattern], |row| {
+            Ok(Ticket {
+                id: row.get(0)?,
+                epic: row.get::<_, Option<String>>(1)?.unwrap_or_default(),
+                title: row.get(2)?,
+                description: row.get(3)?,
+                status: row.get(4)?,
+                file_path: row.get(5)?,
+                criteria: Vec::new(),
+            })
+        })?;
+
+        tickets.collect()
+    })
+}
+
+pub fn get_tickets_by_epic(epic_id: &str) -> Result<Vec<Ticket>, String> {
+    with_connection(|conn| {
+        let mut stmt = conn.prepare(
+            "SELECT ticket_id, epic_id, title, description, status, file_path
+             FROM tickets WHERE epic_id = ?1"
+        )?;
+
+        let tickets = stmt.query_map([epic_id], |row| {
+            Ok(Ticket {
+                id: row.get(0)?,
+                epic: row.get::<_, Option<String>>(1)?.unwrap_or_default(),
+                title: row.get(2)?,
+                description: row.get(3)?,
+                status: row.get(4)?,
+                file_path: row.get(5)?,
+                criteria: Vec::new(),
+            })
+        })?;
+
+        tickets.collect()
+    })
+}
+
+pub fn delete_epic(epic_id: &str) -> Result<(), String> {
+    with_connection(|conn| {
+        conn.execute("DELETE FROM epics WHERE epic_id = ?1", [epic_id])?;
+        Ok(())
+    })
+}
+
+pub fn delete_ticket(ticket_id: &str) -> Result<(), String> {
+    with_connection(|conn| {
+        conn.execute("DELETE FROM tickets WHERE ticket_id = ?1", [ticket_id])?;
+        Ok(())
+    })
 }
