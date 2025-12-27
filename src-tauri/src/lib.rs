@@ -668,11 +668,22 @@ fn rename_file_or_folder(old_path: String, new_path: String) -> Result<(), Strin
 }
 
 fn extract_project_name(project_path: &str) -> String {
-    Path::new(project_path)
+    let path = Path::new(project_path);
+    let name = path
         .file_name()
         .and_then(|n| n.to_str())
-        .unwrap_or("project")
-        .to_string()
+        .unwrap_or("project");
+
+    // If extracted name is .m2k, use parent directory name
+    if name == ".m2k" {
+        path.parent()
+            .and_then(|p| p.file_name())
+            .and_then(|n| n.to_str())
+            .unwrap_or("project")
+            .to_string()
+    } else {
+        name.to_string()
+    }
 }
 
 fn sanitize_folder_name(name: &str) -> String {
