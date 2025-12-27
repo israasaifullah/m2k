@@ -284,9 +284,19 @@ function FilePreview({ path }: FilePreviewProps) {
   }
 
   if (content) {
+    const ext = path.split('.').pop()?.toLowerCase();
+    const isYaml = ['yaml', 'yml'].includes(ext || '');
+
     return (
-      <div className="h-full overflow-auto p-6">
-        <pre className="text-sm whitespace-pre-wrap font-mono">{content}</pre>
+      <div className="h-full flex flex-col">
+        {isYaml && (
+          <div className="flex items-center justify-between p-3 border-b border-[var(--geist-accents-2)]">
+            <h3 className="text-sm font-medium truncate">{path.split('/').pop()}</h3>
+          </div>
+        )}
+        <div className="flex-1 min-h-0 overflow-auto p-6">
+          <pre className="text-sm whitespace-pre-wrap font-mono">{content}</pre>
+        </div>
       </div>
     );
   }
