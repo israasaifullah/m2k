@@ -63,6 +63,8 @@ function StatsSection() {
 export function KanbanBoard() {
   const tickets = useAppStore((s) => s.tickets);
   const selectedEpic = useAppStore((s) => s.selectedEpic);
+  const setViewMode = useAppStore((s) => s.setViewMode);
+  const resetPrdState = useAppStore((s) => s.resetPrdState);
 
   const filteredTickets = selectedEpic
     ? tickets.filter((t) => t.epic === selectedEpic)
@@ -72,11 +74,16 @@ export function KanbanBoard() {
   const inProgress = sortByTicketId(filteredTickets.filter((t) => t.status === "in_progress"));
   const done = sortByTicketId(filteredTickets.filter((t) => t.status === "done"));
 
+  const handleAddTicketToBacklog = () => {
+    resetPrdState();
+    setViewMode("prd");
+  };
+
   return (
     <div className="flex flex-col h-full min-h-0">
       <StatsSection />
       <div className="flex justify-center gap-3 md:gap-4 p-3 md:p-4 flex-1 min-h-0 overflow-auto">
-        <KanbanColumn title="Backlog" tickets={backlog} />
+        <KanbanColumn title="Backlog" tickets={backlog} onAddTicket={selectedEpic ? handleAddTicketToBacklog : undefined} />
         <KanbanColumn title="In Progress" tickets={inProgress} />
         <KanbanColumn title="Done" tickets={done} />
       </div>

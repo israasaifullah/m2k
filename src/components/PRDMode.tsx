@@ -5,7 +5,7 @@ import { EPIC_TEMPLATE, TICKET_TEMPLATE } from "../lib/templates";
 import { validateEpic, validateTicket } from "../lib/validation";
 import { Toast, useToast } from "./Toast";
 import { invoke } from "@tauri-apps/api/core";
-import { FileText, Image, FolderOpen, File, Save } from "lucide-react";
+import { FileText, Image, FolderOpen, File, Save, Columns3 } from "lucide-react";
 import { Select } from "./Select";
 import { Toggle } from "./Toggle";
 
@@ -428,6 +428,18 @@ export function PRDMode() {
           <span className="text-xs font-semibold text-[var(--geist-foreground)]">{prdState.docType}</span>
         </div>
         <VimToggle />
+        {prdState.docType === "ticket" && selectedEpic && (
+          <button
+            onClick={() => {
+              setViewMode("kanban");
+            }}
+            className="px-3 py-1 text-xs bg-gradient-to-r from-[var(--geist-accents-2)] to-[var(--geist-accents-1)] border border-[var(--geist-accents-3)] rounded-full hover:scale-[1.02] transition-all flex items-center gap-1.5"
+            title={`View ${selectedEpic} Board`}
+          >
+            <Columns3 size={12} />
+            <span>Epic Board</span>
+          </button>
+        )}
         <button
           onClick={() => setShowResourcePicker(true)}
           className="px-3 py-1 text-xs bg-gradient-to-r from-[var(--geist-accents-2)] to-[var(--geist-accents-1)] border border-[var(--geist-accents-3)] rounded-full hover:scale-[1.02] transition-all flex items-center gap-1.5"
