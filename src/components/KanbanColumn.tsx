@@ -1,4 +1,4 @@
-import { Inbox, Loader2, CheckCircle2 } from "lucide-react";
+import { Inbox, Loader2, CheckCircle2, Plus } from "lucide-react";
 import type { Ticket } from "../types";
 import { TicketCard } from "./TicketCard";
 
@@ -11,9 +11,10 @@ const columnIcons: Record<string, React.ReactNode> = {
 interface Props {
   title: string;
   tickets: Ticket[];
+  onAddTicket?: () => void;
 }
 
-export function KanbanColumn({ title, tickets }: Props) {
+export function KanbanColumn({ title, tickets, onAddTicket }: Props) {
   return (
     <section
       className="flex flex-col bg-[var(--geist-accents-1)] rounded-lg overflow-hidden border border-[var(--geist-accents-2)] max-h-[300px] md:max-h-none md:h-full w-[300px] shrink-0"
@@ -24,12 +25,24 @@ export function KanbanColumn({ title, tickets }: Props) {
           {columnIcons[title]}
           <h2 className="font-medium text-sm md:text-base">{title}</h2>
         </div>
-        <span
-          className="text-xs px-2 py-0.5 rounded-full bg-[var(--geist-accents-2)] text-[var(--geist-accents-6)]"
-          aria-label={`${tickets.length} tickets`}
-        >
-          {tickets.length}
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className="text-xs px-2 py-0.5 rounded-full bg-[var(--geist-accents-2)] text-[var(--geist-accents-6)]"
+            aria-label={`${tickets.length} tickets`}
+          >
+            {tickets.length}
+          </span>
+          {onAddTicket && (
+            <button
+              onClick={onAddTicket}
+              className="p-1 rounded-full hover:bg-[var(--geist-accents-2)] transition-colors"
+              title={`Add ticket to ${title}`}
+              aria-label={`Add ticket to ${title}`}
+            >
+              <Plus size={14} />
+            </button>
+          )}
+        </div>
       </header>
       <ul className="flex-1 overflow-y-auto p-2 space-y-2 list-none" role="list" aria-label={`${title} tickets`}>
         {tickets.map((ticket) => (
