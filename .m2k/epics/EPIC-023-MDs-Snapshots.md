@@ -13,9 +13,9 @@
 
 | ID | Description | Status |
 |----|-------------|--------|
-| T-136 | Design & Create Database Schema for Epics and Tickets | backlog |
-| T-137 | Implement Database CRUD Operations | backlog |
-| T-138 | Create Full Sync Command | backlog |
-| T-139 | Trigger Auto-Sync on Project Load | backlog |
-| T-140 | Implement Incremental Sync on File Create/Modify | backlog |
-| T-141 | Handle Status Change Moves via File Watcher | backlog |
+| T-136 | Design & Create Database Schema for Epics and Tickets | done |
+| T-137 | Implement Database CRUD Operations | done |
+| T-138 | Create Full Sync Command | done |
+| T-139 | Trigger Auto-Sync on Project Load | done |
+| T-140 | Implement Incremental Sync on File Create/Modify | done |
+| T-141 | Handle Status Change Moves via File Watcher | done |
