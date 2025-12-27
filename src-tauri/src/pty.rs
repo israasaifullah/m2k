@@ -100,8 +100,17 @@ pub fn spawn_pty(app: AppHandle, working_dir: String, cols: u16, rows: u16) -> R
                     // Calculate bytes per second
                     let bytes_per_sec: usize = recent_bytes.iter().map(|(_, b)| b).sum();
 
-                    // Emit every 50ms OR when batch exceeds 32KB
-                    if last_emit.elapsed() > Duration::from_millis(50) || batch.len() > 32768 {
+                    // Adaptive emit_delay based on throughput
+                    let emit_delay = if bytes_per_sec < 50_000 {
+                        Duration::from_millis(16)  // Fast path for simple commands
+                    } else if bytes_per_sec < 200_000 {
+                        Duration::from_millis(33)  // Medium throttle
+                    } else {
+                        Duration::from_millis(100) // Heavy throttle
+                    };
+
+                    // Emit when delay elapsed OR batch exceeds 32KB
+                    if last_emit.elapsed() >= emit_delay || batch.len() > 32768 {
                         let _ = app_clone.emit(&format!("pty-output-{}", pty_id_clone), batch.clone());
                         batch.clear();
                         last_emit = Instant::now();
