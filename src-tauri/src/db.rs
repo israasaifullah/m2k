@@ -81,6 +81,58 @@ pub fn init_database() -> Result<(), String> {
         [],
     ).map_err(|e| format!("Failed to create project_settings table: {}", e))?;
 
+    // Create epics table for MD snapshots
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS epics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            epic_id TEXT NOT NULL UNIQUE,
+            title TEXT NOT NULL,
+            scope TEXT,
+            file_path TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )",
+        [],
+    ).map_err(|e| format!("Failed to create epics table: {}", e))?;
+
+    // Create tickets table for MD snapshots
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS tickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticket_id TEXT NOT NULL UNIQUE,
+            epic_id TEXT,
+            title TEXT NOT NULL,
+            description TEXT,
+            status TEXT NOT NULL,
+            file_path TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (epic_id) REFERENCES epics(epic_id)
+        )",
+        [],
+    ).map_err(|e| format!("Failed to create tickets table: {}", e))?;
+
+    // Create indexes for epics and tickets
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_epics_epic_id ON epics(epic_id)",
+        [],
+    ).map_err(|e| format!("Failed to create epics epic_id index: {}", e))?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_tickets_ticket_id ON tickets(ticket_id)",
+        [],
+    ).map_err(|e| format!("Failed to create tickets ticket_id index: {}", e))?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_tickets_epic_id ON tickets(epic_id)",
+        [],
+    ).map_err(|e| format!("Failed to create tickets epic_id index: {}", e))?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_tickets_status ON tickets(status)",
+        [],
+    ).map_err(|e| format!("Failed to create tickets status index: {}", e))?;
+
     // Migrate existing tables: add stats columns if missing
     let migrations = [
         "ALTER TABLE project_settings ADD COLUMN total_epics INTEGER NOT NULL DEFAULT 0",
