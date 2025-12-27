@@ -944,7 +944,11 @@ pub fn run() {
             create_folder,
             delete_folder,
             rename_file_or_folder,
-            upload_resource
+            upload_resource,
+            get_project_name,
+            set_m2k_backup_path,
+            get_m2k_backup_path,
+            sync_m2k_backup
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

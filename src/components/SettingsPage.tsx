@@ -30,6 +30,9 @@ export function SettingsPage() {
   const [projectSettings, setProjectSettings] = useState<ProjectSettings | null>(null);
   const [epicCounter, setEpicCounter] = useState(0);
   const [ticketCounter, setTicketCounter] = useState(0);
+  const [backupPath, setBackupPath] = useState("");
+  const [hasBackupPath, setHasBackupPath] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const { toast, showToast, hideToast } = useToast();
 
   useEffect(() => {
@@ -47,6 +50,15 @@ export function SettingsPage() {
             setProjectSettings(settings);
             setEpicCounter(settings.epic_counter);
             setTicketCounter(settings.ticket_counter);
+          }
+
+          // Load backup path
+          const existingBackupPath = await invoke<string | null>("get_m2k_backup_path", {
+            projectPath,
+          });
+          if (existingBackupPath) {
+            setBackupPath(existingBackupPath);
+            setHasBackupPath(true);
           }
         }
       } catch (err) {
@@ -150,6 +162,47 @@ export function SettingsPage() {
       showToast(errMsg, "error");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSelectBackupPath = async () => {
+    if (!projectPath) return;
+
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: "Select Backup Location",
+      });
+
+      if (selected) {
+        await invoke("set_m2k_backup_path", {
+          projectPath,
+          backupPath: selected,
+        });
+        setBackupPath(selected);
+        setHasBackupPath(true);
+        showToast("Backup path configured successfully", "success");
+      }
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      showToast(errMsg, "error");
+    }
+  };
+
+  const handleSyncBackup = async () => {
+    if (!projectPath) return;
+
+    setSyncing(true);
+    try {
+      const destination = await invoke<string>("sync_m2k_backup", { projectPath });
+      showToast(`Backup completed: ${destination}`, "success");
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      showToast(errMsg, "error");
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -283,6 +336,60 @@ export function SettingsPage() {
               />
             </div>
           </div>
+
+          {/* .m2k Backup */}
+          {projectPath && (
+            <div className="bg-[var(--geist-accents-1)] border border-[var(--geist-accents-2)] rounded-lg p-4">
+              <h2 className="text-base font-medium text-[var(--geist-foreground)] mb-4">
+                .m2k Folder Backup
+              </h2>
+              <p className="text-sm text-[var(--geist-accents-5)] mb-4">
+                Configure backup location for your .m2k folder. Useful when .m2k is gitignored.
+              </p>
+
+              {hasBackupPath ? (
+                <div className="space-y-3">
+                  <div className="p-3 bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg">
+                    <div className="text-xs text-[var(--geist-accents-5)] mb-1">Backup Location</div>
+                    <div className="text-sm text-[var(--geist-foreground)] font-mono break-all">
+                      {backupPath}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSyncBackup}
+                      disabled={syncing || saving}
+                      className="flex-1 px-4 py-2 text-sm bg-[var(--geist-success)] text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                    >
+                      {syncing ? "Syncing..." : "Sync Now"}
+                    </button>
+                    <button
+                      onClick={handleSelectBackupPath}
+                      disabled={syncing || saving}
+                      className="px-4 py-2 text-sm border border-[var(--geist-accents-3)] rounded-lg hover:bg-[var(--geist-accents-1)] transition-colors disabled:opacity-50"
+                    >
+                      Change
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="p-3 bg-[var(--geist-warning-light)] border border-[var(--geist-warning)] rounded-lg mb-3">
+                    <p className="text-sm text-[var(--geist-warning-dark)]">
+                      No backup location configured.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleSelectBackupPath}
+                    disabled={saving}
+                    className="w-full px-4 py-2 text-sm border border-[var(--geist-accents-3)] rounded-lg hover:bg-[var(--geist-accents-1)] transition-colors disabled:opacity-50"
+                  >
+                    Select Backup Location
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Project Counters */}
           {projectPath && projectSettings && (

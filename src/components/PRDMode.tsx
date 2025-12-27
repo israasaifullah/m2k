@@ -273,6 +273,18 @@ export function PRDMode() {
     setViewMode("kanban");
   };
 
+  const handleCreateNew = () => {
+    const content = prdState.docType === "epic" ? EPIC_TEMPLATE : TICKET_TEMPLATE;
+    setPrdState({
+      mode: "create",
+      docType: prdState.docType,
+      content,
+      editingPath: undefined,
+    });
+    setSelectedEpic("");
+    setError(null);
+  };
+
   const handleSave = async () => {
     if (!projectPath) return;
 
@@ -355,6 +367,14 @@ export function PRDMode() {
         setEpics([...epics, newEpic]);
 
         showToast(`Epic EPIC-${paddedId} created`, "success");
+
+        // Switch to edit mode to prevent duplicate creation
+        setPrdState({
+          mode: "edit",
+          docType: "epic",
+          content,
+          editingPath: filePath,
+        });
       } else {
         if (!selectedEpic) {
           setError("Please select an epic for this ticket");
@@ -398,6 +418,14 @@ export function PRDMode() {
         setTickets([...tickets, newTicket]);
 
         showToast(`Ticket T-${paddedId} created`, "success");
+
+        // Switch to edit mode to prevent duplicate creation
+        setPrdState({
+          mode: "edit",
+          docType: "ticket",
+          content,
+          editingPath: filePath,
+        });
       }
       //setTimeout(() => setViewMode("kanban"), 1000);
     } catch (err) {
@@ -462,6 +490,16 @@ export function PRDMode() {
         <div className="w-px h-4 bg-[var(--geist-accents-3)]" />
         {error && (
           <span className="text-xs text-[var(--geist-error)]">{error}</span>
+        )}
+        {isEditing && (
+          <button
+            onClick={handleCreateNew}
+            disabled={saving}
+            className="px-3 py-1 text-sm border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)] transition-colors disabled:opacity-50"
+            title="Create new document"
+          >
+            Create New
+          </button>
         )}
         <button
           onClick={handleCancel}
