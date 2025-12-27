@@ -602,6 +602,35 @@ pub fn delete_ticket(ticket_id: &str) -> Result<(), String> {
     })
 }
 
+pub fn update_ticket_status(ticket_id: &str, new_status: &str, project_path: &str) -> Result<(), String> {
+    // Get current status first
+    let old_status: Option<String> = with_connection(|conn| {
+        conn.query_row(
+            "SELECT status FROM tickets WHERE ticket_id = ?1",
+            [ticket_id],
+            |row| row.get(0),
+        )
+    }).ok();
+
+    // Update ticket status
+    with_connection(|conn| {
+        conn.execute(
+            "UPDATE tickets SET status = ?1, updated_at = datetime('now') WHERE ticket_id = ?2",
+            rusqlite::params![new_status, ticket_id],
+        )?;
+        Ok(())
+    })?;
+
+    // Update stats if status changed
+    if let Some(old) = old_status {
+        if old != new_status {
+            update_ticket_status_stats(project_path, &old, new_status)?;
+        }
+    }
+
+    Ok(())
+}
+
 pub fn sync_md_snapshots(project_path: &str) -> Result<(), String> {
     use crate::parser::{parse_epics, parse_tickets};
 

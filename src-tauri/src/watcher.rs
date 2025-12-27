@@ -111,13 +111,42 @@ fn handle_md_file_change(event: &Event, project_path: &str, app: &AppHandle) {
                         "done"
                     };
 
+                    // Map folder to status
+                    let new_status = match folder {
+                        "backlog" => "backlog",
+                        "inprogress" => "in_progress",
+                        _ => "done"
+                    };
+
                     if let Some(ticket) = parser::parse_ticket_file(path, folder) {
-                        let result = db::upsert_ticket(&ticket);
-                        let status = if result.is_ok() { "synced" } else { "error" };
-                        let _ = app.emit("md-synced", serde_json::json!({
-                            "file_path": file_path_str,
-                            "status": status
-                        }));
+                        // For move events (detected as Create after Remove), update status
+                        // For modify events, upsert full ticket
+                        if matches!(event.kind, Create(_)) {
+                            // Try status update first (more efficient for moves)
+                            let ticket_id = ticket.id.clone();
+                            let status_result = db::update_ticket_status(&ticket_id, new_status, project_path);
+
+                            // If ticket doesn't exist, do full upsert
+                            let result = if status_result.is_err() {
+                                db::upsert_ticket(&ticket)
+                            } else {
+                                status_result
+                            };
+
+                            let status = if result.is_ok() { "synced" } else { "error" };
+                            let _ = app.emit("md-synced", serde_json::json!({
+                                "file_path": file_path_str,
+                                "status": status
+                            }));
+                        } else {
+                            // Modify event - do full upsert
+                            let result = db::upsert_ticket(&ticket);
+                            let status = if result.is_ok() { "synced" } else { "error" };
+                            let _ = app.emit("md-synced", serde_json::json!({
+                                "file_path": file_path_str,
+                                "status": status
+                            }));
+                        }
                     }
                 }
             }
