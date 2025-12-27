@@ -79,6 +79,7 @@ pub fn spawn_pty(app: AppHandle, working_dir: String, cols: u16, rows: u16) -> R
         let mut batch = String::new();
         let mut last_emit = Instant::now();
         let mut recent_bytes: VecDeque<(Instant, usize)> = VecDeque::new();
+        let mut last_delay = Duration::from_millis(16);
 
         loop {
             match reader.read(&mut buf) {
@@ -109,6 +110,15 @@ pub fn spawn_pty(app: AppHandle, working_dir: String, cols: u16, rows: u16) -> R
                         Duration::from_millis(100) // Heavy throttle
                     };
 
+                    // Log throttle changes
+                    if emit_delay != last_delay {
+                        log::debug!(
+                            "[PTY-{}] Throttle adjusted: {}ms -> {}ms (bytes/s: {})",
+                            pty_id_clone, last_delay.as_millis(), emit_delay.as_millis(), bytes_per_sec
+                        );
+                        last_delay = emit_delay;
+                    }
+
                     // For low throughput: emit after every read (interactive mode)
                     // For high throughput: throttle with delay
                     let should_emit = if bytes_per_sec < 50_000 {
@@ -118,6 +128,10 @@ pub fn spawn_pty(app: AppHandle, working_dir: String, cols: u16, rows: u16) -> R
                     };
 
                     if should_emit {
+                        log::debug!(
+                            "[PTY-{}] Emitted batch: {} bytes (delay: {}ms, bytes/s: {})",
+                            pty_id_clone, batch.len(), emit_delay.as_millis(), bytes_per_sec
+                        );
                         let _ = app_clone.emit(&format!("pty-output-{}", pty_id_clone), batch.clone());
                         batch.clear();
                         last_emit = Instant::now();
