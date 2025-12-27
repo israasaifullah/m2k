@@ -49,6 +49,15 @@ export function useProjectLoader() {
         console.warn("Failed to initialize project counters:", e);
       }
 
+      // Sync MD files to database
+      try {
+        console.log("Syncing project data to database...");
+        await invoke("sync_md_to_db", { projectPath: m2kPath });
+        console.log("Database sync complete");
+      } catch (e) {
+        console.warn("Failed to sync MD to database:", e);
+      }
+
       const [tickets, epics] = await Promise.all([
         invoke<Ticket[]>("parse_tickets", { path: m2kPath }),
         invoke<Epic[]>("parse_epics", { path: m2kPath }),
