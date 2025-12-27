@@ -885,6 +885,102 @@ fn upload_resource(
     Ok(dest_path.to_string_lossy().to_string())
 }
 
+#[tauri::command]
+fn copy_resource_to_project(
+    source_path: String,
+    destination_project_path: String,
+    destination_folder: Option<String>,
+) -> Result<String, String> {
+    let source = Path::new(&source_path);
+    if !source.exists() {
+        return Err("Source file or folder does not exist".to_string());
+    }
+
+    let base_dir = if destination_project_path.ends_with(".m2k") || destination_project_path.ends_with(".m2k/") {
+        PathBuf::from(&destination_project_path)
+    } else {
+        PathBuf::from(&destination_project_path).join(".m2k")
+    };
+
+    let resources_dir = base_dir.join("resources");
+    fs::create_dir_all(&resources_dir)
+        .map_err(|e| format!("Failed to create resources directory: {}", e))?;
+
+    let target_dir = if let Some(dest) = destination_folder {
+        resources_dir.join(dest)
+    } else {
+        resources_dir.clone()
+    };
+
+    fs::create_dir_all(&target_dir)
+        .map_err(|e| format!("Failed to create target directory: {}", e))?;
+
+    let file_or_folder_name = source
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
+
+    let mut dest_path = target_dir.join(&file_or_folder_name);
+
+    // Handle duplicates: append (1), (2), etc.
+    if dest_path.exists() {
+        let stem = Path::new(&file_or_folder_name)
+            .file_stem()
+            .unwrap_or_default()
+            .to_string_lossy();
+        let ext_str = Path::new(&file_or_folder_name)
+            .extension()
+            .map(|e| format!(".{}", e.to_string_lossy()))
+            .unwrap_or_default();
+
+        let mut counter = 1;
+        loop {
+            let new_name = if source.is_dir() {
+                format!("{} ({})", stem, counter)
+            } else {
+                format!("{} ({}){}", stem, counter, ext_str)
+            };
+            dest_path = target_dir.join(&new_name);
+            if !dest_path.exists() {
+                break;
+            }
+            counter += 1;
+        }
+    }
+
+    if source.is_dir() {
+        copy_dir_all(source, &dest_path)?;
+    } else {
+        fs::copy(source, &dest_path)
+            .map_err(|e| format!("Failed to copy file: {}", e))?;
+    }
+
+    Ok(dest_path.to_string_lossy().to_string())
+}
+
+fn copy_dir_all(src: &Path, dst: &Path) -> Result<(), String> {
+    fs::create_dir_all(dst)
+        .map_err(|e| format!("Failed to create directory: {}", e))?;
+
+    for entry in fs::read_dir(src)
+        .map_err(|e| format!("Failed to read directory: {}", e))?
+    {
+        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let ty = entry.file_type()
+            .map_err(|e| format!("Failed to get file type: {}", e))?;
+        let dest_path = dst.join(entry.file_name());
+
+        if ty.is_dir() {
+            copy_dir_all(&entry.path(), &dest_path)?;
+        } else {
+            fs::copy(entry.path(), &dest_path)
+                .map_err(|e| format!("Failed to copy file: {}", e))?;
+        }
+    }
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -945,6 +1041,7 @@ pub fn run() {
             delete_folder,
             rename_file_or_folder,
             upload_resource,
+            copy_resource_to_project,
             get_project_name,
             set_m2k_backup_path,
             get_m2k_backup_path,

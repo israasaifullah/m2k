@@ -342,9 +342,10 @@ interface ContextMenuProps {
   onCopyPath: (node: FileNode) => void;
   onUploadToFolder?: (node: FileNode) => void;
   onNewFileInFolder?: (node: FileNode) => void;
+  onCopyToProject?: (node: FileNode) => void;
 }
 
-function ContextMenu({ node, x, y, onClose, onRename, onDelete, onCopyPath, onUploadToFolder, onNewFileInFolder }: ContextMenuProps) {
+function ContextMenu({ node, x, y, onClose, onRename, onDelete, onCopyPath, onUploadToFolder, onNewFileInFolder, onCopyToProject }: ContextMenuProps) {
   useEffect(() => {
     const handleClick = () => onClose();
     const handleEscape = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -387,6 +388,15 @@ function ContextMenu({ node, x, y, onClose, onRename, onDelete, onCopyPath, onUp
         <Copy size={14} />
         Copy Relative Path
       </button>
+      {onCopyToProject && (
+        <button
+          onClick={() => { onCopyToProject(node); onClose(); }}
+          className="w-full px-4 py-2 text-sm text-left hover:bg-[var(--geist-accents-1)] flex items-center gap-2"
+        >
+          <Copy size={14} />
+          Copy to Project
+        </button>
+      )}
       <button
         onClick={() => { onRename(node); onClose(); }}
         className="w-full px-4 py-2 text-sm text-left hover:bg-[var(--geist-accents-1)] flex items-center gap-2"
@@ -682,6 +692,114 @@ function RenameDialog({ node, onClose, onSuccess }: RenameDialogProps) {
   );
 }
 
+interface CopyToProjectDialogProps {
+  node: FileNode;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function CopyToProjectDialog({ node, onClose, onSuccess }: CopyToProjectDialogProps) {
+  const registeredProjects = useAppStore((s) => s.registeredProjects);
+  const activeProjectId = useAppStore((s) => s.activeProjectId);
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [copying, setCopying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => e.key === "Escape" && !copying && onClose();
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [onClose, copying]);
+
+  const availableProjects = registeredProjects.filter(p => p.id !== activeProjectId);
+
+  const handleCopy = async () => {
+    if (!selectedProjectId) {
+      setError("Please select a destination project");
+      return;
+    }
+
+    const destinationProject = registeredProjects.find(p => p.id === selectedProjectId);
+    if (!destinationProject) {
+      setError("Destination project not found");
+      return;
+    }
+
+    setCopying(true);
+    setError(null);
+
+    try {
+      await invoke("copy_resource_to_project", {
+        sourcePath: node.path,
+        destinationProjectPath: destinationProject.path,
+        destinationFolder: null,
+      });
+      onSuccess();
+      onClose();
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setCopying(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={copying ? undefined : onClose}>
+      <div className="bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+        <h2 className="text-lg font-semibold mb-4">Copy to Project</h2>
+
+        <p className="text-sm text-[var(--geist-accents-5)] mb-2">
+          Copy <strong className="text-[var(--geist-foreground)]">{node.name}</strong> to:
+        </p>
+
+        <div className="mb-6">
+          <select
+            value={selectedProjectId || ""}
+            onChange={(e) => setSelectedProjectId(Number(e.target.value))}
+            className="w-full px-3 py-2 text-sm bg-[var(--geist-background)] border border-[var(--geist-accents-2)] rounded focus:outline-none focus:border-[var(--geist-accents-4)]"
+          >
+            <option value="">Select a project...</option>
+            {availableProjects.map(project => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {availableProjects.length === 0 && (
+          <p className="text-sm text-[var(--geist-accents-5)] mb-4">
+            No other projects available
+          </p>
+        )}
+
+        {error && (
+          <div className="p-3 mb-4 bg-[var(--geist-error-light)] border border-[var(--geist-error)] rounded text-sm text-[var(--geist-error)]">
+            {error}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            disabled={copying}
+            className="px-4 py-2 text-sm border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)] disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleCopy}
+            disabled={copying || !selectedProjectId}
+            className="px-4 py-2 text-sm bg-[var(--geist-success)] text-white rounded-full hover:opacity-90 disabled:opacity-50"
+          >
+            {copying ? "Copying..." : "Copy"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface DeleteDialogProps {
   node: FileNode;
   onClose: () => void;
@@ -772,6 +890,7 @@ export function ResourceBoard() {
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
   const [renameNode, setRenameNode] = useState<FileNode | null>(null);
   const [deleteNode, setDeleteNode] = useState<FileNode | null>(null);
+  const [copyToProjectNode, setCopyToProjectNode] = useState<FileNode | null>(null);
   const [contextMenu, setContextMenu] = useState<{ node: FileNode; x: number; y: number } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string[]>([]);
@@ -915,6 +1034,14 @@ export function ResourceBoard() {
   const handleNewFileInFolder = (node: FileNode) => {
     setNewFileParentPath(node.path);
     setShowNewFileDialog(true);
+  };
+
+  const handleCopyToProject = (node: FileNode) => {
+    setCopyToProjectNode(node);
+  };
+
+  const handleCopySuccess = () => {
+    showToast("Resource copied to project successfully", "success");
   };
 
   const resourcePath = projectPath ? `${projectPath}/resources` : "";
@@ -1108,6 +1235,15 @@ export function ResourceBoard() {
           onCopyPath={handleCopyPath}
           onUploadToFolder={handleUploadToFolder}
           onNewFileInFolder={handleNewFileInFolder}
+          onCopyToProject={handleCopyToProject}
+        />
+      )}
+
+      {copyToProjectNode && (
+        <CopyToProjectDialog
+          node={copyToProjectNode}
+          onClose={() => setCopyToProjectNode(null)}
+          onSuccess={handleCopySuccess}
         />
       )}
 
