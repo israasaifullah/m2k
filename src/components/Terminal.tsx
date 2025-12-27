@@ -13,6 +13,9 @@ export function Terminal() {
   const ptyIdRef = useRef<number | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
+  const isPausedRef = useRef<boolean>(false);
+  const pausedBufferRef = useRef<string>('');
   const projectPath = useAppStore((s) => s.projectPath);
 
   useEffect(() => {
@@ -77,6 +80,14 @@ export function Terminal() {
         let writeTimeout: number | null = null;
 
         const flushBuffer = () => {
+          if (isPausedRef.current) {
+            // Accumulate in paused buffer instead of writing
+            pausedBufferRef.current += writeBuffer;
+            writeBuffer = '';
+            writeTimeout = null;
+            return;
+          }
+
           if (writeBuffer) {
             xterm.write(writeBuffer);
             writeBuffer = '';
@@ -181,23 +192,65 @@ export function Terminal() {
 
   const toggleCollapse = () => setIsCollapsed((prev) => !prev);
 
+  const togglePause = () => {
+    const newPausedState = !isPaused;
+    setIsPaused(newPausedState);
+    isPausedRef.current = newPausedState;
+
+    if (!newPausedState) {
+      // Resume: flush paused buffer
+      if (pausedBufferRef.current && xtermRef.current) {
+        xtermRef.current.write(pausedBufferRef.current);
+        pausedBufferRef.current = '';
+      }
+    }
+  };
+
+  // Keyboard shortcut: Ctrl+P
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'p') {
+        e.preventDefault();
+        togglePause();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isPaused]);
+
   return (
     <div className={`flex flex-col bg-[#0a0a0a] transition-all duration-200 ${isCollapsed ? "h-8" : "h-[500px]"}`}>
-      <div
-        className="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--geist-accents-2)] bg-[var(--geist-background)] cursor-pointer select-none hover:bg-[var(--geist-accents-1)]"
-        onClick={toggleCollapse}
-      >
+      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--geist-accents-2)] bg-[var(--geist-background)]">
         <div
-          className={`w-2 h-2 rounded-full ${
-            isConnected ? "bg-green-500" : "bg-red-500"
-          }`}
-        />
-        <span className="text-xs text-[var(--geist-accents-5)] flex-1">Terminal</span>
+          className="flex items-center gap-2 flex-1 cursor-pointer select-none hover:opacity-80"
+          onClick={toggleCollapse}
+        >
+          <div
+            className={`w-2 h-2 rounded-full ${
+              isConnected ? "bg-green-500" : "bg-red-500"
+            }`}
+          />
+          <span className="text-xs text-[var(--geist-accents-5)]">Terminal</span>
+          {isPaused && (
+            <span className="text-xs text-yellow-500 font-medium">Paused</span>
+          )}
+        </div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            togglePause();
+          }}
+          className="px-2 py-0.5 text-xs rounded hover:bg-[var(--geist-accents-2)] text-[var(--geist-accents-5)] transition-colors"
+          title="Toggle pause (Ctrl+P)"
+        >
+          {isPaused ? "Resume" : "Pause"}
+        </button>
         <svg
-          className={`w-3.5 h-3.5 text-[var(--geist-accents-5)] transition-transform duration-200 ${isCollapsed ? "" : "rotate-180"}`}
+          className={`w-3.5 h-3.5 text-[var(--geist-accents-5)] transition-transform duration-200 cursor-pointer ${isCollapsed ? "" : "rotate-180"}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
+          onClick={toggleCollapse}
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
         </svg>
