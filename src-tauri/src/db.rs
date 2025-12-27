@@ -427,3 +427,12 @@ pub fn update_epic_completion_stats(
         Ok(())
     })
 }
+
+// Backup path management
+pub fn set_backup_path(project_path: &str, backup_path: &str) -> Result<(), String> {
+    set_app_state(&format!("backup_path:{}", project_path), backup_path)
+}
+
+pub fn get_backup_path(project_path: &str) -> Result<Option<String>, String> {
+    get_app_state(&format!("backup_path:{}", project_path))
+}

@@ -233,6 +233,19 @@ export function PRDMode() {
     setError(null);
   };
 
+  const handleEpicChange = (epicId: string) => {
+    setSelectedEpic(epicId);
+
+    // If editing a ticket, update the epic in the content
+    if (prdState.mode === "edit" && prdState.docType === "ticket") {
+      const updatedContent = prdState.content.replace(
+        /\*\*Epic:\*\* EPIC-\d+/,
+        `**Epic:** ${epicId}`
+      );
+      setPrdState({ content: updatedContent });
+    }
+  };
+
   const handleContentChange = (content: string) => {
     setPrdState({ content });
     setError(null);
@@ -289,11 +302,13 @@ export function PRDMode() {
         if (prdState.editingPath.includes("/backlog/") || prdState.editingPath.includes("/inprogress/") || prdState.editingPath.includes("/done/")) {
           // It's a ticket
           const titleMatch = prdState.content.match(/^# (T-\d+): (.+)$/m);
+          const epicMatch = prdState.content.match(/\*\*Epic:\*\* (EPIC-\d+)/);
           const id = titleMatch?.[1];
           const title = titleMatch?.[2]?.trim();
+          const epic = epicMatch?.[1];
           if (id && title) {
             const updatedTickets = tickets.map(t =>
-              t.id === id ? { ...t, title } : t
+              t.id === id ? { ...t, title, ...(epic && { epic }) } : t
             );
             setTickets(updatedTickets);
           }
@@ -400,7 +415,15 @@ export function PRDMode() {
         prdState.docType === "epic" ? EPIC_TEMPLATE : TICKET_TEMPLATE;
       setPrdState({ content });
     }
-  }, []);
+
+    // Extract epic from content when editing a ticket
+    if (prdState.mode === "edit" && prdState.docType === "ticket" && prdState.content) {
+      const epicMatch = prdState.content.match(/\*\*Epic:\*\* (EPIC-\d+)/);
+      if (epicMatch) {
+        setSelectedEpic(epicMatch[1]);
+      }
+    }
+  }, [prdState.mode, prdState.docType]);
 
   // Register save callback for vim :w trigger
   useEffect(() => {
@@ -420,8 +443,8 @@ export function PRDMode() {
         />
         <EpicSelector
           value={selectedEpic}
-          onChange={setSelectedEpic}
-          disabled={prdState.docType === "epic" || isEditing}
+          onChange={handleEpicChange}
+          disabled={prdState.docType === "epic"}
         />
         <div className="px-3 py-1 rounded-full bg-gradient-to-r from-[var(--geist-accents-2)] to-[var(--geist-accents-1)] border border-[var(--geist-accents-3)] flex items-center gap-2">
           <span className="text-[10px] text-[var(--geist-accents-5)]">{isEditing ? "Editing" : "New"}</span>

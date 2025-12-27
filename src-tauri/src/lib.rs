@@ -662,6 +662,139 @@ fn rename_file_or_folder(old_path: String, new_path: String) -> Result<(), Strin
         .map_err(|e| format!("Failed to rename: {}", e))
 }
 
+fn extract_project_name(project_path: &str) -> String {
+    Path::new(project_path)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("project")
+        .to_string()
+}
+
+fn sanitize_folder_name(name: &str) -> String {
+    name.chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect()
+}
+
+fn generate_unique_project_folder(base_path: &Path, project_name: &str) -> PathBuf {
+    let sanitized = sanitize_folder_name(project_name);
+    let mut candidate = base_path.join(&sanitized);
+
+    if !candidate.exists() {
+        return candidate;
+    }
+
+    let mut counter = 1;
+    loop {
+        candidate = base_path.join(format!("{}-{}", sanitized, counter));
+        if !candidate.exists() {
+            break;
+        }
+        counter += 1;
+    }
+
+    candidate
+}
+
+fn validate_backup_path(backup_path: &Path, project_path: &Path) -> Result<(), String> {
+    if !backup_path.exists() {
+        return Err("Backup path does not exist".to_string());
+    }
+
+    if !backup_path.is_dir() {
+        return Err("Backup path is not a directory".to_string());
+    }
+
+    let backup_canonical = backup_path.canonicalize()
+        .map_err(|e| format!("Failed to resolve backup path: {}", e))?;
+    let project_canonical = project_path.canonicalize()
+        .map_err(|e| format!("Failed to resolve project path: {}", e))?;
+
+    if backup_canonical.starts_with(&project_canonical) {
+        return Err("Cannot backup to a location inside the project".to_string());
+    }
+
+    Ok(())
+}
+
+fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), String> {
+    if !dst.exists() {
+        fs::create_dir_all(dst)
+            .map_err(|e| format!("Failed to create destination directory: {}", e))?;
+    }
+
+    for entry in fs::read_dir(src).map_err(|e| format!("Failed to read directory: {}", e))? {
+        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let path = entry.path();
+        let file_name = entry.file_name();
+        let dest_path = dst.join(&file_name);
+
+        if path.is_dir() {
+            copy_dir_recursive(&path, &dest_path)?;
+        } else {
+            fs::copy(&path, &dest_path)
+                .map_err(|e| format!("Failed to copy file {}: {}", path.display(), e))?;
+        }
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+fn get_project_name(project_path: String) -> Result<String, String> {
+    Ok(extract_project_name(&project_path))
+}
+
+#[tauri::command]
+fn set_m2k_backup_path(project_path: String, backup_path: String) -> Result<(), String> {
+    let backup_dir = Path::new(&backup_path);
+    let project_dir = Path::new(&project_path);
+
+    validate_backup_path(backup_dir, project_dir)?;
+
+    db::set_backup_path(&project_path, &backup_path)
+}
+
+#[tauri::command]
+fn get_m2k_backup_path(project_path: String) -> Result<Option<String>, String> {
+    db::get_backup_path(&project_path)
+}
+
+#[tauri::command]
+fn sync_m2k_backup(project_path: String) -> Result<String, String> {
+    let backup_base = db::get_backup_path(&project_path)?
+        .ok_or("No backup path configured for this project")?;
+
+    let backup_base_path = Path::new(&backup_base);
+    let project_dir = Path::new(&project_path);
+
+    validate_backup_path(backup_base_path, project_dir)?;
+
+    let m2k_source = project_dir.join(".m2k");
+    if !m2k_source.exists() {
+        return Err("No .m2k folder found in project".to_string());
+    }
+
+    let project_name = extract_project_name(&project_path);
+    let project_backup_folder = generate_unique_project_folder(backup_base_path, &project_name);
+    let m2k_destination = project_backup_folder.join(".m2k");
+
+    if m2k_destination.exists() {
+        fs::remove_dir_all(&m2k_destination)
+            .map_err(|e| format!("Failed to remove existing backup: {}", e))?;
+    }
+
+    copy_dir_recursive(&m2k_source, &m2k_destination)?;
+
+    Ok(m2k_destination.to_string_lossy().to_string())
+}
+
 #[tauri::command]
 fn upload_resource(
     project_path: String,
