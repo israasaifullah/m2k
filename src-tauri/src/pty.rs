@@ -1,5 +1,5 @@
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::io::{Read, Write};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -78,6 +78,8 @@ pub fn spawn_pty(app: AppHandle, working_dir: String, cols: u16, rows: u16) -> R
         let mut buf = [0u8; 8192]; // Increased buffer size
         let mut batch = String::new();
         let mut last_emit = Instant::now();
+        let mut recent_bytes: VecDeque<(Instant, usize)> = VecDeque::new();
+        let mut last_delay = Duration::from_millis(16);
 
         loop {
             match reader.read(&mut buf) {
@@ -92,8 +94,44 @@ pub fn spawn_pty(app: AppHandle, working_dir: String, cols: u16, rows: u16) -> R
                 Ok(n) => {
                     batch.push_str(&String::from_utf8_lossy(&buf[..n]));
 
-                    // Emit every 50ms OR when batch exceeds 32KB
-                    if last_emit.elapsed() > Duration::from_millis(50) || batch.len() > 32768 {
+                    // Track bytes in sliding window (last 1 second)
+                    recent_bytes.push_back((Instant::now(), n));
+                    recent_bytes.retain(|(t, _)| t.elapsed() < Duration::from_secs(1));
+
+                    // Calculate bytes per second
+                    let bytes_per_sec: usize = recent_bytes.iter().map(|(_, b)| b).sum();
+
+                    // Adaptive emit_delay based on throughput
+                    let emit_delay = if bytes_per_sec < 50_000 {
+                        Duration::from_millis(16)  // Fast path for simple commands
+                    } else if bytes_per_sec < 200_000 {
+                        Duration::from_millis(33)  // Medium throttle
+                    } else {
+                        Duration::from_millis(100) // Heavy throttle
+                    };
+
+                    // Log throttle changes
+                    if emit_delay != last_delay {
+                        log::debug!(
+                            "[PTY-{}] Throttle adjusted: {}ms -> {}ms (bytes/s: {})",
+                            pty_id_clone, last_delay.as_millis(), emit_delay.as_millis(), bytes_per_sec
+                        );
+                        last_delay = emit_delay;
+                    }
+
+                    // For low throughput: emit after every read (interactive mode)
+                    // For high throughput: throttle with delay
+                    let should_emit = if bytes_per_sec < 50_000 {
+                        true  // Immediate emit for interactive commands
+                    } else {
+                        last_emit.elapsed() >= emit_delay || batch.len() > 32768
+                    };
+
+                    if should_emit {
+                        log::debug!(
+                            "[PTY-{}] Emitted batch: {} bytes (delay: {}ms, bytes/s: {})",
+                            pty_id_clone, batch.len(), emit_delay.as_millis(), bytes_per_sec
+                        );
                         let _ = app_clone.emit(&format!("pty-output-{}", pty_id_clone), batch.clone());
                         batch.clear();
                         last_emit = Instant::now();
