@@ -262,6 +262,11 @@ fn sync_stats_from_files(project_path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn sync_md_to_db(project_path: String) -> Result<(), String> {
+    db::sync_md_snapshots(&project_path)
+}
+
+#[tauri::command]
 fn get_project_settings(project_path: String) -> Result<Option<db::ProjectSettings>, String> {
     db::get_project_settings(&project_path)
 }
@@ -1012,6 +1017,7 @@ pub fn run() {
             get_next_ticket_id,
             init_project_counters,
             sync_stats_from_files,
+            sync_md_to_db,
             get_project_settings,
             update_project_counters,
             move_ticket_to_status,

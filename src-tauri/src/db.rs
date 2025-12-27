@@ -601,3 +601,80 @@ pub fn delete_ticket(ticket_id: &str) -> Result<(), String> {
         Ok(())
     })
 }
+
+pub fn sync_md_snapshots(project_path: &str) -> Result<(), String> {
+    use crate::parser::{parse_epics, parse_tickets};
+
+    // Parse all MD files
+    let m2k_path = std::path::Path::new(project_path).join(".m2k");
+    let epics = parse_epics(m2k_path.to_str().ok_or("Invalid path")?)?;
+    let tickets = parse_tickets(m2k_path.to_str().ok_or("Invalid path")?)?;
+
+    with_connection(|conn| {
+        // Start transaction for atomicity
+        conn.execute("BEGIN TRANSACTION", [])?;
+
+        // Delete existing snapshots for this project
+        let delete_result = (|| {
+            conn.execute(
+                "DELETE FROM epics WHERE file_path LIKE ?1",
+                [format!("{}%", project_path)]
+            )?;
+            conn.execute(
+                "DELETE FROM tickets WHERE file_path LIKE ?1",
+                [format!("{}%", project_path)]
+            )?;
+            Ok::<(), rusqlite::Error>(())
+        })();
+
+        if let Err(e) = delete_result {
+            let _ = conn.execute("ROLLBACK", []);
+            return Err(e);
+        }
+
+        // Bulk insert epics
+        for epic in &epics {
+            let insert_result = conn.execute(
+                "INSERT INTO epics (epic_id, title, scope, file_path, updated_at)
+                 VALUES (?1, ?2, ?3, ?4, datetime('now'))",
+                rusqlite::params![
+                    epic.id,
+                    epic.title,
+                    epic.scope,
+                    m2k_path.to_str().unwrap_or("")
+                ],
+            );
+
+            if let Err(e) = insert_result {
+                let _ = conn.execute("ROLLBACK", []);
+                return Err(e);
+            }
+        }
+
+        // Bulk insert tickets
+        for ticket in &tickets {
+            let insert_result = conn.execute(
+                "INSERT INTO tickets
+                 (ticket_id, epic_id, title, description, status, file_path, updated_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, datetime('now'))",
+                rusqlite::params![
+                    ticket.id,
+                    if ticket.epic.is_empty() { None } else { Some(&ticket.epic) },
+                    ticket.title,
+                    ticket.description,
+                    ticket.status,
+                    ticket.file_path
+                ],
+            );
+
+            if let Err(e) = insert_result {
+                let _ = conn.execute("ROLLBACK", []);
+                return Err(e);
+            }
+        }
+
+        // Commit transaction
+        conn.execute("COMMIT", [])?;
+        Ok(())
+    })
+}
