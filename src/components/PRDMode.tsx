@@ -219,6 +219,7 @@ export function PRDMode() {
   const tickets = useAppStore((s) => s.tickets);
   const epics = useAppStore((s) => s.epics);
   const setSaveCallback = useAppStore((s) => s.setSaveCallback);
+  const globalSelectedEpic = useAppStore((s) => s.selectedEpic);
   const [selectedEpic, setSelectedEpic] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -400,7 +401,12 @@ export function PRDMode() {
         prdState.docType === "epic" ? EPIC_TEMPLATE : TICKET_TEMPLATE;
       setPrdState({ content });
     }
-  }, []);
+
+    // Pre-select epic from global store when creating a new ticket
+    if (prdState.mode === "create" && prdState.docType === "ticket" && globalSelectedEpic) {
+      setSelectedEpic(globalSelectedEpic);
+    }
+  }, [prdState.mode, prdState.docType, globalSelectedEpic]);
 
   // Register save callback for vim :w trigger
   useEffect(() => {
