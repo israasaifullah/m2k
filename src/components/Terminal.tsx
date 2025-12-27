@@ -230,12 +230,22 @@ export function Terminal() {
     }
   };
 
-  // Keyboard shortcut: Ctrl+P
+  const handleClear = () => {
+    if (xtermRef.current) {
+      xtermRef.current.clear();
+      pausedBufferRef.current = '';
+    }
+  };
+
+  // Keyboard shortcuts: Ctrl+P (pause), Ctrl+L (clear)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 'p') {
         e.preventDefault();
         togglePause();
+      } else if (e.ctrlKey && e.key === 'l') {
+        e.preventDefault();
+        handleClear();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -273,6 +283,16 @@ export function Terminal() {
           title="Toggle pause (Ctrl+P)"
         >
           {isPaused ? "Resume" : "Pause"}
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleClear();
+          }}
+          className="px-2 py-0.5 text-xs rounded hover:bg-[var(--geist-accents-2)] text-[var(--geist-accents-5)] transition-colors"
+          title="Clear output (Ctrl+L)"
+        >
+          Clear
         </button>
         <svg
           className={`w-3.5 h-3.5 text-[var(--geist-accents-5)] transition-transform duration-200 cursor-pointer ${isCollapsed ? "" : "rotate-180"}`}
