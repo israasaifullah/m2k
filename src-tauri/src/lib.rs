@@ -782,20 +782,33 @@ fn sync_m2k_backup(project_path: String) -> Result<String, String> {
     validate_backup_path(backup_base_path, project_dir)?;
 
     let m2k_source = project_dir.join(".m2k");
-    if !m2k_source.exists() {
-        return Err("No .m2k folder found in project".to_string());
+    let project_name = extract_project_name(&project_path);
+    let sanitized_name = sanitize_folder_name(&project_name);
+
+    // Use sanitized project name directly (no unique suffix) to allow updates
+    let project_backup_folder = backup_base_path.join(&sanitized_name);
+
+    // Create project folder if doesn't exist
+    if !project_backup_folder.exists() {
+        fs::create_dir_all(&project_backup_folder)
+            .map_err(|e| format!("Failed to create project backup folder: {}", e))?;
     }
 
-    let project_name = extract_project_name(&project_path);
-    let project_backup_folder = generate_unique_project_folder(backup_base_path, &project_name);
     let m2k_destination = project_backup_folder.join(".m2k");
 
+    // Remove existing backup to ensure clean sync
     if m2k_destination.exists() {
         fs::remove_dir_all(&m2k_destination)
             .map_err(|e| format!("Failed to remove existing backup: {}", e))?;
     }
 
-    copy_dir_recursive(&m2k_source, &m2k_destination)?;
+    // Copy source .m2k if exists, otherwise create empty .m2k
+    if m2k_source.exists() {
+        copy_dir_recursive(&m2k_source, &m2k_destination)?;
+    } else {
+        fs::create_dir_all(&m2k_destination)
+            .map_err(|e| format!("Failed to create .m2k folder: {}", e))?;
+    }
 
     Ok(m2k_destination.to_string_lossy().to_string())
 }
