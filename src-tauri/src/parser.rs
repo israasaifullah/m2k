@@ -51,7 +51,7 @@ pub fn parse_tickets(project_path: &str) -> Result<Vec<Ticket>, String> {
     Ok(tickets)
 }
 
-fn parse_ticket_file(path: &Path, folder: &str) -> Option<Ticket> {
+pub fn parse_ticket_file(path: &Path, folder: &str) -> Option<Ticket> {
     let content = fs::read_to_string(path).ok()?;
     let file_name = path.file_stem()?.to_str()?;
 
@@ -150,7 +150,7 @@ pub fn parse_epics(project_path: &str) -> Result<Vec<Epic>, String> {
     Ok(epics)
 }
 
-fn parse_epic_file(path: &Path) -> Option<Epic> {
+pub fn parse_epic_file(path: &Path) -> Option<Epic> {
     let content = fs::read_to_string(path).ok()?;
     let file_name = path.file_stem()?.to_str()?;
 
