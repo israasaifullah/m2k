@@ -782,10 +782,6 @@ fn sync_m2k_backup(project_path: String) -> Result<String, String> {
     validate_backup_path(backup_base_path, project_dir)?;
 
     let m2k_source = project_dir.join(".m2k");
-    if !m2k_source.exists() {
-        return Err("No .m2k folder found in project".to_string());
-    }
-
     let project_name = extract_project_name(&project_path);
     let project_backup_folder = generate_unique_project_folder(backup_base_path, &project_name);
 
@@ -802,7 +798,13 @@ fn sync_m2k_backup(project_path: String) -> Result<String, String> {
             .map_err(|e| format!("Failed to remove existing backup: {}", e))?;
     }
 
-    copy_dir_recursive(&m2k_source, &m2k_destination)?;
+    // Create .m2k in backup destination
+    if m2k_source.exists() {
+        copy_dir_recursive(&m2k_source, &m2k_destination)?;
+    } else {
+        fs::create_dir_all(&m2k_destination)
+            .map_err(|e| format!("Failed to create .m2k folder: {}", e))?;
+    }
 
     Ok(m2k_destination.to_string_lossy().to_string())
 }
