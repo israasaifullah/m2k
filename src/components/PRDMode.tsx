@@ -234,6 +234,19 @@ export function PRDMode() {
     setError(null);
   };
 
+  const handleEpicChange = (epicId: string) => {
+    setSelectedEpic(epicId);
+
+    // If editing a ticket, update the epic in the content
+    if (prdState.mode === "edit" && prdState.docType === "ticket") {
+      const updatedContent = prdState.content.replace(
+        /\*\*Epic:\*\* EPIC-\d+/,
+        `**Epic:** ${epicId}`
+      );
+      setPrdState({ content: updatedContent });
+    }
+  };
+
   const handleContentChange = (content: string) => {
     setPrdState({ content });
     setError(null);
@@ -259,6 +272,18 @@ export function PRDMode() {
 
   const handleCancel = () => {
     setViewMode("kanban");
+  };
+
+  const handleCreateNew = () => {
+    const content = prdState.docType === "epic" ? EPIC_TEMPLATE : TICKET_TEMPLATE;
+    setPrdState({
+      mode: "create",
+      docType: prdState.docType,
+      content,
+      editingPath: undefined,
+    });
+    setSelectedEpic("");
+    setError(null);
   };
 
   const handleSave = async () => {
@@ -290,11 +315,13 @@ export function PRDMode() {
         if (prdState.editingPath.includes("/backlog/") || prdState.editingPath.includes("/inprogress/") || prdState.editingPath.includes("/done/")) {
           // It's a ticket
           const titleMatch = prdState.content.match(/^# (T-\d+): (.+)$/m);
+          const epicMatch = prdState.content.match(/\*\*Epic:\*\* (EPIC-\d+)/);
           const id = titleMatch?.[1];
           const title = titleMatch?.[2]?.trim();
+          const epic = epicMatch?.[1];
           if (id && title) {
             const updatedTickets = tickets.map(t =>
-              t.id === id ? { ...t, title } : t
+              t.id === id ? { ...t, title, ...(epic && { epic }) } : t
             );
             setTickets(updatedTickets);
           }
@@ -341,6 +368,14 @@ export function PRDMode() {
         setEpics([...epics, newEpic]);
 
         showToast(`Epic EPIC-${paddedId} created`, "success");
+
+        // Switch to edit mode to prevent duplicate creation
+        setPrdState({
+          mode: "edit",
+          docType: "epic",
+          content,
+          editingPath: filePath,
+        });
       } else {
         if (!selectedEpic) {
           setError("Please select an epic for this ticket");
@@ -384,6 +419,14 @@ export function PRDMode() {
         setTickets([...tickets, newTicket]);
 
         showToast(`Ticket T-${paddedId} created`, "success");
+
+        // Switch to edit mode to prevent duplicate creation
+        setPrdState({
+          mode: "edit",
+          docType: "ticket",
+          content,
+          editingPath: filePath,
+        });
       }
       //setTimeout(() => setViewMode("kanban"), 1000);
     } catch (err) {
@@ -402,11 +445,6 @@ export function PRDMode() {
       setPrdState({ content });
     }
 
-    // Pre-select epic from global store when creating a new ticket
-    if (prdState.mode === "create" && prdState.docType === "ticket" && globalSelectedEpic) {
-      setSelectedEpic(globalSelectedEpic);
-    }
-
     // Extract epic from content when editing a ticket
     if (prdState.mode === "edit" && prdState.docType === "ticket" && prdState.content) {
       const epicMatch = prdState.content.match(/\*\*Epic:\*\* (EPIC-\d+)/);
@@ -414,7 +452,11 @@ export function PRDMode() {
         setSelectedEpic(epicMatch[1]);
       }
     }
-  }, [prdState.mode, prdState.docType, prdState.content, globalSelectedEpic]);
+    // Pre-select epic from global store when creating a new ticket
+    if (prdState.mode === "create" && prdState.docType === "ticket" && globalSelectedEpic) {
+      setSelectedEpic(globalSelectedEpic);
+    }
+  }, [prdState.mode, prdState.docType, globalSelectedEpic]);
 
   // Register save callback for vim :w trigger
   useEffect(() => {
@@ -434,8 +476,8 @@ export function PRDMode() {
         />
         <EpicSelector
           value={selectedEpic}
-          onChange={setSelectedEpic}
-          disabled={prdState.docType === "epic" || isEditing}
+          onChange={handleEpicChange}
+          disabled={prdState.docType === "epic"}
         />
         <div className="px-3 py-1 rounded-full bg-gradient-to-r from-[var(--geist-accents-2)] to-[var(--geist-accents-1)] border border-[var(--geist-accents-3)] flex items-center gap-2">
           <span className="text-[10px] text-[var(--geist-accents-5)]">{isEditing ? "Editing" : "New"}</span>
@@ -465,6 +507,16 @@ export function PRDMode() {
         <div className="w-px h-4 bg-[var(--geist-accents-3)]" />
         {error && (
           <span className="text-xs text-[var(--geist-error)]">{error}</span>
+        )}
+        {isEditing && (
+          <button
+            onClick={handleCreateNew}
+            disabled={saving}
+            className="px-3 py-1 text-sm border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)] transition-colors disabled:opacity-50"
+            title="Create new document"
+          >
+            Create New
+          </button>
         )}
         <button
           onClick={handleCancel}
