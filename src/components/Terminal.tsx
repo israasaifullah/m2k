@@ -14,8 +14,12 @@ export function Terminal() {
   const [isConnected, setIsConnected] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
+  const [outputRate, setOutputRate] = useState(0);
+  const [isThrottled, setIsThrottled] = useState(false);
   const isPausedRef = useRef<boolean>(false);
   const pausedBufferRef = useRef<string>('');
+  const bytesReceivedRef = useRef<number>(0);
+  const lastActivityRef = useRef<number>(Date.now());
   const projectPath = useAppStore((s) => s.projectPath);
 
   useEffect(() => {
@@ -100,11 +104,24 @@ export function Terminal() {
           `pty-output-${ptyId}`,
           (event) => {
             writeBuffer += event.payload;
+            bytesReceivedRef.current += event.payload.length;
+            lastActivityRef.current = Date.now();
 
             if (writeTimeout) clearTimeout(writeTimeout);
             writeTimeout = setTimeout(flushBuffer, 16); // ~60fps
           }
         );
+
+        // Output rate tracking (updates every 500ms)
+        const rateInterval = setInterval(() => {
+          const bytes = bytesReceivedRef.current;
+          const kbPerSec = bytes / 1024 / 0.5; // KB/s over 500ms
+          const idle = Date.now() - lastActivityRef.current > 2000; // 2s idle
+
+          setOutputRate(idle ? 0 : kbPerSec);
+          setIsThrottled(bytes > 25_000); // >50KB/s over 500ms = >25KB in this interval
+          bytesReceivedRef.current = 0;
+        }, 500);
 
         // Listen for PTY exit
         const unlistenExit = await listen(`pty-exit-${ptyId}`, () => {
@@ -116,8 +133,9 @@ export function Terminal() {
           setIsConnected(false);
         });
 
-        // Store unlisteners for cleanup
+        // Store unlisteners and interval for cleanup
         (xterm as any)._unlisteners = [unlistenOutput, unlistenExit];
+        (xterm as any)._rateInterval = rateInterval;
       } catch (err) {
         console.error("Failed to spawn PTY:", err);
         xterm.write(`\x1b[31mFailed to spawn terminal: ${err}\x1b[0m\r\n`);
@@ -160,6 +178,12 @@ export function Terminal() {
       const unlisteners = (xterm as any)._unlisteners as UnlistenFn[] | undefined;
       if (unlisteners) {
         unlisteners.forEach((fn) => fn());
+      }
+
+      // Cleanup rate interval
+      const rateInterval = (xterm as any)._rateInterval as number | undefined;
+      if (rateInterval) {
+        clearInterval(rateInterval);
       }
 
       // Kill PTY
@@ -233,6 +257,11 @@ export function Terminal() {
           <span className="text-xs text-[var(--geist-accents-5)]">Terminal</span>
           {isPaused && (
             <span className="text-xs text-yellow-500 font-medium">Paused</span>
+          )}
+          {outputRate > 0 && (
+            <span className={`text-xs ${isThrottled ? 'text-yellow-500 font-bold' : 'text-[var(--geist-accents-5)]'}`}>
+              {isThrottled && '🐢 '}{outputRate.toFixed(1)} KB/s
+            </span>
           )}
         </div>
         <button
