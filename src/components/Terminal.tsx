@@ -6,6 +6,21 @@ import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { useAppStore } from "../lib/store";
 import "@xterm/xterm/css/xterm.css";
 
+interface TerminalMetrics {
+  bufferSize: number[];
+  writeDuration: number[];
+  timestamp: number[];
+}
+
+const metrics: TerminalMetrics = {
+  bufferSize: [],
+  writeDuration: [],
+  timestamp: []
+};
+
+// Expose metrics for debugging
+(window as any).__terminalMetrics = metrics;
+
 export function Terminal() {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
@@ -93,7 +108,28 @@ export function Terminal() {
           }
 
           if (writeBuffer) {
+            // Track metrics
+            const start = performance.now();
+            const bufferSize = writeBuffer.length;
+
             xterm.write(writeBuffer);
+
+            const duration = performance.now() - start;
+            const now = Date.now();
+
+            metrics.bufferSize.push(bufferSize);
+            metrics.writeDuration.push(duration);
+            metrics.timestamp.push(now);
+
+            // Keep last 60s (rolling window cleanup)
+            const cutoff = now - 60000;
+            const idx = metrics.timestamp.findIndex(t => t > cutoff);
+            if (idx > 0) {
+              metrics.bufferSize = metrics.bufferSize.slice(idx);
+              metrics.writeDuration = metrics.writeDuration.slice(idx);
+              metrics.timestamp = metrics.timestamp.slice(idx);
+            }
+
             writeBuffer = '';
           }
           writeTimeout = null;
