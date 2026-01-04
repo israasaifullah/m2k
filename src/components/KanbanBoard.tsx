@@ -3,6 +3,7 @@ import { useAppStore } from "../lib/store";
 import { KanbanColumn } from "./KanbanColumn";
 import { StatsPill } from "./StatsPill";
 import { EpicFilter } from "./EpicFilter";
+import { EpicExecuteButton } from "./EpicExecuteButton";
 import { useStats, formatNumber } from "../hooks/useStats";
 import { useApiStatus } from "../hooks/useApiStatus";
 import type { Ticket } from "../types";
@@ -18,6 +19,7 @@ function sortByTicketId(tickets: Ticket[]): Ticket[] {
 function StatsSection() {
   const stats = useStats();
   const { state: apiState, refresh, loading } = useApiStatus();
+  const selectedEpic = useAppStore((s) => s.selectedEpic);
 
   const getApiStatusProps = () => {
     switch (apiState) {
@@ -38,6 +40,12 @@ function StatsSection() {
   return (
     <div className="flex items-center justify-center gap-3 py-3 border-b border-[var(--geist-accents-2)]">
       <EpicFilter />
+      {selectedEpic && (
+        <>
+          <div className="w-px h-4 bg-[var(--geist-accents-3)]" />
+          <EpicExecuteButton epic={selectedEpic} />
+        </>
+      )}
       <div className="w-px h-4 bg-[var(--geist-accents-3)]" />
       {hasStats && (
         <>

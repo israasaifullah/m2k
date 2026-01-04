@@ -34,18 +34,10 @@ pub fn parse_tickets(project_path: &str) -> Result<Vec<Ticket>, String> {
             continue;
         }
 
-        for entry in WalkDir::new(&folder_path)
-            .max_depth(1)
-            .into_iter()
-            .filter_map(|e| e.ok())
-        {
-            let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "md") {
-                if let Some(ticket) = parse_ticket_file(path, folder) {
-                    tickets.push(ticket);
-                }
-            }
-        }
+        let folder_tickets = collect_markdown_files(&folder_path, |path| {
+            parse_ticket_file(path, folder)
+        });
+        tickets.extend(folder_tickets);
     }
 
     Ok(tickets)
@@ -126,26 +118,36 @@ fn folder_to_status(folder: &str) -> String {
     }
 }
 
-pub fn parse_epics(project_path: &str) -> Result<Vec<Epic>, String> {
-    let mut epics = Vec::new();
-    let epics_path = Path::new(project_path).join("epics");
+fn collect_markdown_files<T, F>(path: &Path, parser: F) -> Vec<T>
+where
+    F: Fn(&Path) -> Option<T>,
+{
+    let mut results = Vec::new();
 
-    if !epics_path.exists() {
-        return Ok(epics);
-    }
-
-    for entry in WalkDir::new(&epics_path)
+    for entry in WalkDir::new(path)
         .max_depth(1)
         .into_iter()
         .filter_map(|e| e.ok())
     {
-        let path = entry.path();
-        if path.is_file() && path.extension().map_or(false, |ext| ext == "md") {
-            if let Some(epic) = parse_epic_file(path) {
-                epics.push(epic);
+        let entry_path = entry.path();
+        if entry_path.is_file() && entry_path.extension().map_or(false, |ext| ext == "md") {
+            if let Some(item) = parser(entry_path) {
+                results.push(item);
             }
         }
     }
+
+    results
+}
+
+pub fn parse_epics(project_path: &str) -> Result<Vec<Epic>, String> {
+    let epics_path = Path::new(project_path).join("epics");
+
+    if !epics_path.exists() {
+        return Ok(Vec::new());
+    }
+
+    let epics = collect_markdown_files(&epics_path, parse_epic_file);
 
     Ok(epics)
 }
@@ -161,7 +163,7 @@ pub fn parse_epic_file(path: &Path) -> Option<Epic> {
         .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
         .unwrap_or_else(|| file_name.to_string());
 
-    let title = extract_epic_title(&content).unwrap_or_else(|| id.clone());
+    let title = extract_title(&content).unwrap_or_else(|| id.clone());
     let scope = extract_scope(&content).unwrap_or_default();
     let tickets = extract_ticket_refs(&content);
 
@@ -173,20 +175,6 @@ pub fn parse_epic_file(path: &Path) -> Option<Epic> {
     })
 }
 
-fn extract_epic_title(content: &str) -> Option<String> {
-    let re = Regex::new(r"^#\s+(.+)").ok()?;
-    for line in content.lines() {
-        if let Some(caps) = re.captures(line) {
-            let title = caps.get(1)?.as_str().to_string();
-            // Remove EPIC ID prefix if present
-            if let Some(idx) = title.find(':') {
-                return Some(title[idx + 1..].trim().to_string());
-            }
-            return Some(title);
-        }
-    }
-    None
-}
 
 fn extract_scope(content: &str) -> Option<String> {
     let re = Regex::new(r"(?s)## Scope\s*\n(.+?)(?:\n##|\z)").ok()?;
