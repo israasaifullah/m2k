@@ -163,6 +163,52 @@ where
     f(conn).map_err(|e| format!("Database error: {}", e))
 }
 
+fn map_row_to_project(row: &rusqlite::Row) -> SqliteResult<Project> {
+    Ok(Project {
+        id: row.get(0)?,
+        name: row.get(1)?,
+        path: row.get(2)?,
+        created_at: row.get(3)?,
+        last_accessed: row.get(4)?,
+    })
+}
+
+fn map_row_to_ticket(row: &rusqlite::Row) -> SqliteResult<Ticket> {
+    Ok(Ticket {
+        id: row.get(0)?,
+        epic: row.get::<_, Option<String>>(1)?.unwrap_or_default(),
+        title: row.get(2)?,
+        description: row.get(3)?,
+        status: row.get(4)?,
+        file_path: row.get(5)?,
+        criteria: Vec::new(),
+    })
+}
+
+fn execute_ticket_insert(conn: &Connection, ticket: &Ticket, use_replace: bool) -> SqliteResult<usize> {
+    let sql = if use_replace {
+        "INSERT OR REPLACE INTO tickets
+         (ticket_id, epic_id, title, description, status, file_path, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, datetime('now'))"
+    } else {
+        "INSERT INTO tickets
+         (ticket_id, epic_id, title, description, status, file_path, updated_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, datetime('now'))"
+    };
+
+    conn.execute(
+        sql,
+        rusqlite::params![
+            ticket.id,
+            if ticket.epic.is_empty() { None } else { Some(&ticket.epic) },
+            ticket.title,
+            ticket.description,
+            ticket.status,
+            ticket.file_path
+        ],
+    )
+}
+
 pub fn add_project(name: &str, path: &str) -> Result<Project, String> {
     with_connection(|conn| {
         conn.execute(
@@ -172,15 +218,7 @@ pub fn add_project(name: &str, path: &str) -> Result<Project, String> {
 
         let id = conn.last_insert_rowid();
         let mut stmt = conn.prepare("SELECT id, name, path, created_at, last_accessed FROM projects WHERE id = ?1")?;
-        stmt.query_row([id], |row| {
-            Ok(Project {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                path: row.get(2)?,
-                created_at: row.get(3)?,
-                last_accessed: row.get(4)?,
-            })
-        })
+        stmt.query_row([id], map_row_to_project)
     })
 }
 
@@ -190,15 +228,7 @@ pub fn get_all_projects() -> Result<Vec<Project>, String> {
             "SELECT id, name, path, created_at, last_accessed FROM projects"
         )?;
 
-        let projects = stmt.query_map([], |row| {
-            Ok(Project {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                path: row.get(2)?,
-                created_at: row.get(3)?,
-                last_accessed: row.get(4)?,
-            })
-        })?;
+        let projects = stmt.query_map([], map_row_to_project)?;
 
         projects.collect()
     })
@@ -210,15 +240,7 @@ pub fn get_project_by_path(path: &str) -> Result<Option<Project>, String> {
             "SELECT id, name, path, created_at, last_accessed FROM projects WHERE path = ?1"
         )?;
 
-        match stmt.query_row([path], |row| {
-            Ok(Project {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                path: row.get(2)?,
-                created_at: row.get(3)?,
-                last_accessed: row.get(4)?,
-            })
-        }) {
+        match stmt.query_row([path], map_row_to_project) {
             Ok(project) => Ok(Some(project)),
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
             Err(e) => Err(e),
@@ -504,19 +526,7 @@ pub fn upsert_epic(epic: &Epic, file_path: &str) -> Result<(), String> {
 
 pub fn upsert_ticket(ticket: &Ticket) -> Result<(), String> {
     with_connection(|conn| {
-        conn.execute(
-            "INSERT OR REPLACE INTO tickets
-             (ticket_id, epic_id, title, description, status, file_path, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, datetime('now'))",
-            rusqlite::params![
-                ticket.id,
-                if ticket.epic.is_empty() { None } else { Some(&ticket.epic) },
-                ticket.title,
-                ticket.description,
-                ticket.status,
-                ticket.file_path
-            ],
-        )?;
+        execute_ticket_insert(conn, ticket, true)?;
         Ok(())
     })
 }
@@ -549,17 +559,7 @@ pub fn get_all_tickets_snapshot(project_path: &str) -> Result<Vec<Ticket>, Strin
         )?;
 
         let pattern = format!("{}%", project_path);
-        let tickets = stmt.query_map([pattern], |row| {
-            Ok(Ticket {
-                id: row.get(0)?,
-                epic: row.get::<_, Option<String>>(1)?.unwrap_or_default(),
-                title: row.get(2)?,
-                description: row.get(3)?,
-                status: row.get(4)?,
-                file_path: row.get(5)?,
-                criteria: Vec::new(),
-            })
-        })?;
+        let tickets = stmt.query_map([pattern], map_row_to_ticket)?;
 
         tickets.collect()
     })
@@ -572,17 +572,7 @@ pub fn get_tickets_by_epic(epic_id: &str) -> Result<Vec<Ticket>, String> {
              FROM tickets WHERE epic_id = ?1"
         )?;
 
-        let tickets = stmt.query_map([epic_id], |row| {
-            Ok(Ticket {
-                id: row.get(0)?,
-                epic: row.get::<_, Option<String>>(1)?.unwrap_or_default(),
-                title: row.get(2)?,
-                description: row.get(3)?,
-                status: row.get(4)?,
-                file_path: row.get(5)?,
-                criteria: Vec::new(),
-            })
-        })?;
+        let tickets = stmt.query_map([epic_id], map_row_to_ticket)?;
 
         tickets.collect()
     })
@@ -682,21 +672,7 @@ pub fn sync_md_snapshots(project_path: &str) -> Result<(), String> {
 
         // Bulk insert tickets
         for ticket in &tickets {
-            let insert_result = conn.execute(
-                "INSERT INTO tickets
-                 (ticket_id, epic_id, title, description, status, file_path, updated_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, datetime('now'))",
-                rusqlite::params![
-                    ticket.id,
-                    if ticket.epic.is_empty() { None } else { Some(&ticket.epic) },
-                    ticket.title,
-                    ticket.description,
-                    ticket.status,
-                    ticket.file_path
-                ],
-            );
-
-            if let Err(e) = insert_result {
+            if let Err(e) = execute_ticket_insert(conn, ticket, false) {
                 let _ = conn.execute("ROLLBACK", []);
                 return Err(e);
             }
