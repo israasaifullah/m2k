@@ -1,0 +1,11 @@
+1. Prioritisation on EPIC (P1, P2, P3, P4)
+2. Refactoring: Since we have a copy of markdowns structure in dbs, we can use that as display instead of parsing file. We just need to ensure they are in sync.
+3. Fix what is injected in new project
+4. Light mode
+5. Remove terminal
+6. Execute claude on backend, and write the log
+7. Claude Log viewer
+8. Options to edit/remove EPIC
+9. User able to complete an epic
+10. Add multiple view mode for epic. Kanban view, list view.
+11. Searchable epic list in the PRD mode. THe dropdown should have be searchable for better UX

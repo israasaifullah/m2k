@@ -21,7 +21,7 @@ use tokio::sync::Mutex;
 use claude_session::{ClaudeSession, SessionState};
 use claude_logger::ClaudeLogger;
 use claude_executor::{ClaudeExecutor, TaskRequest};
-use task_manager::{Task, TaskStatus};
+use task_manager::Task;
 use task_queue::{TaskQueue, QueueConfig, QueueStats};
 
 
@@ -1148,7 +1148,7 @@ pub fn run() {
             }
 
             // Initialize task queue
-            let app_handle = app.handle();
+            let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 let workspace = dirs::cache_dir()
                     .unwrap_or_else(|| PathBuf::from("/tmp"))

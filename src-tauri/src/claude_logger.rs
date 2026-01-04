@@ -1,6 +1,6 @@
 use std::fs::{self, File, OpenOptions};
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use chrono::Utc;
 

@@ -1,5 +1,4 @@
 use crate::db::with_connection;
-use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command as TokioCommand;
 use std::process::Stdio;
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
 use crate::claude_logger::{ClaudeLogger, LogLevel};
 use crate::claude_session::ClaudeSession;
 use crate::task_manager::TaskStatus;
@@ -209,7 +209,7 @@ impl ClaudeExecutor {
         tokio::spawn(async move {
             while let Ok(Some(line)) = reader.next_line().await {
                 logger_clone.log(&task_id_str, LogLevel::Info, &line, None).ok();
-                app_clone.emit_all("task-output", serde_json::json!({
+                app_clone.emit("task-output", serde_json::json!({
                     "task_id": task_id_str,
                     "output": line
                 })).ok();

@@ -2,8 +2,8 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use tokio::sync::{Mutex, Semaphore, mpsc};
 use tokio::task::JoinHandle;
-use tauri::AppHandle;
-use crate::claude_executor::{ClaudeExecutor, TaskRequest, TaskResult};
+use tauri::{AppHandle, Emitter};
+use crate::claude_executor::{ClaudeExecutor, TaskRequest};
 use crate::task_manager::{self, TaskStatus};
 
 #[derive(Debug, Clone)]
@@ -133,7 +133,7 @@ impl TaskQueue {
                             None,
                         ).ok();
 
-                        app_clone.emit_all("task-completed", serde_json::json!({
+                        app_clone.emit("task-completed", serde_json::json!({
                             "task_id": task_id_clone,
                             "status": "completed"
                         })).ok();
@@ -146,7 +146,7 @@ impl TaskQueue {
                             Some(&e),
                         ).ok();
 
-                        app_clone.emit_all("task-failed", serde_json::json!({
+                        app_clone.emit("task-failed", serde_json::json!({
                             "task_id": task_id_clone,
                             "error": e
                         })).ok();
