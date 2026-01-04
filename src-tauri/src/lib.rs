@@ -2,13 +2,27 @@ mod db;
 mod parser;
 mod pty;
 mod watcher;
+mod claude_session;
+mod claude_logger;
+mod claude_executor;
+mod task_manager;
+mod task_queue;
+
 use db::Project;
 use keyring::Entry;
 use parser::{Epic, Ticket};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use tauri::AppHandle;
+use tokio::sync::Mutex;
+
+use claude_session::{ClaudeSession, SessionState};
+use claude_logger::ClaudeLogger;
+use claude_executor::{ClaudeExecutor, TaskRequest};
+use task_manager::{Task, TaskStatus};
+use task_queue::{TaskQueue, QueueConfig, QueueStats};
 
 
 const KEYRING_SERVICE: &str = "m2k-app";
@@ -118,6 +132,104 @@ fn has_api_key() -> Result<bool, String> {
         Err(keyring::Error::NoEntry) => Ok(false),
         Err(e) => Err(format!("Failed to check API key: {}", e)),
     }
+}
+
+// Global task queue
+lazy_static::lazy_static! {
+    static ref TASK_QUEUE: Arc<Mutex<Option<TaskQueue>>> = Arc::new(Mutex::new(None));
+}
+
+// Claude session commands
+#[tauri::command]
+fn check_claude_auth() -> Result<SessionState, String> {
+    ClaudeSession::check_auth_status()
+}
+
+#[tauri::command]
+fn claude_login() -> Result<(), String> {
+    ClaudeSession::login()
+}
+
+#[tauri::command]
+fn claude_logout() -> Result<(), String> {
+    ClaudeSession::logout()
+}
+
+// Task execution commands
+#[tauri::command]
+async fn submit_claude_task(
+    prompt: String,
+    workspace_path: Option<String>,
+    timeout_secs: Option<u64>,
+    priority: Option<i64>,
+) -> Result<String, String> {
+    let task_id = task_manager::create_task(prompt.clone(), workspace_path.clone(), priority)?;
+
+    let request = TaskRequest {
+        prompt,
+        workspace_path,
+        timeout_secs,
+    };
+
+    let queue = TASK_QUEUE.lock().await;
+    if let Some(q) = queue.as_ref() {
+        q.submit(task_id.clone(), request).await?;
+    } else {
+        return Err("Task queue not initialized".to_string());
+    }
+
+    Ok(task_id)
+}
+
+#[tauri::command]
+async fn cancel_claude_task(task_id: String) -> Result<(), String> {
+    let queue = TASK_QUEUE.lock().await;
+    if let Some(q) = queue.as_ref() {
+        q.cancel_task(&task_id).await?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn get_claude_task(task_id: String) -> Result<Option<Task>, String> {
+    task_manager::get_task(&task_id)
+}
+
+#[tauri::command]
+fn get_all_claude_tasks() -> Result<Vec<Task>, String> {
+    task_manager::get_all_tasks()
+}
+
+#[tauri::command]
+async fn get_queue_stats() -> Result<QueueStats, String> {
+    let queue = TASK_QUEUE.lock().await;
+    if let Some(q) = queue.as_ref() {
+        Ok(q.get_stats().await)
+    } else {
+        Err("Queue not initialized".to_string())
+    }
+}
+
+#[tauri::command]
+fn get_task_logs(task_id: String) -> Result<String, String> {
+    let log_dir = dirs::cache_dir()
+        .unwrap_or_else(|| PathBuf::from("/tmp"))
+        .join("m2k-claude-tasks")
+        .join("logs");
+
+    let logger = ClaudeLogger::new(log_dir)?;
+    logger.read_task_log(&task_id)
+}
+
+#[tauri::command]
+fn cleanup_old_task_logs(days: u64) -> Result<usize, String> {
+    let log_dir = dirs::cache_dir()
+        .unwrap_or_else(|| PathBuf::from("/tmp"))
+        .join("m2k-claude-tasks")
+        .join("logs");
+
+    let logger = ClaudeLogger::new(log_dir)?;
+    logger.cleanup_old_logs(days)
 }
 
 
@@ -1024,11 +1136,45 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .setup(|_app| {
+        .setup(|app| {
             // Initialize database on startup
             if let Err(e) = db::init_database() {
                 log::error!("Failed to initialize database: {}", e);
             }
+
+            // Initialize tasks table
+            if let Err(e) = task_manager::init_tasks_table() {
+                log::error!("Failed to initialize tasks table: {}", e);
+            }
+
+            // Initialize task queue
+            let app_handle = app.handle();
+            tauri::async_runtime::spawn(async move {
+                let workspace = dirs::cache_dir()
+                    .unwrap_or_else(|| PathBuf::from("/tmp"))
+                    .join("m2k-claude-tasks");
+
+                match ClaudeExecutor::new(workspace) {
+                    Ok(executor) => {
+                        let config = QueueConfig {
+                            max_concurrent: 5,
+                            max_queue_size: 100,
+                        };
+
+                        let queue = TaskQueue::new(config, Arc::new(executor));
+                        queue.start(app_handle.clone()).await;
+
+                        let mut global_queue = TASK_QUEUE.lock().await;
+                        *global_queue = Some(queue);
+
+                        log::info!("Task queue initialized");
+                    }
+                    Err(e) => {
+                        log::error!("Failed to initialize executor: {}", e);
+                    }
+                }
+            });
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -1038,6 +1184,16 @@ pub fn run() {
             load_api_key,
             delete_api_key,
             has_api_key,
+            check_claude_auth,
+            claude_login,
+            claude_logout,
+            submit_claude_task,
+            cancel_claude_task,
+            get_claude_task,
+            get_all_claude_tasks,
+            get_queue_stats,
+            get_task_logs,
+            cleanup_old_task_logs,
             parse_tickets,
             parse_epics,
             start_watcher,
