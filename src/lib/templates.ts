@@ -1,5 +1,8 @@
 export const EPIC_TEMPLATE = `# EPIC-{ID}: Title goes here
 
+## Priority
+P4
+
 ## Scope
 Describe the scope of this epic - what problem does it solve?
 
@@ -31,10 +34,16 @@ export const TICKET_TEMPLATE = `# T-{ID}: Title goes here
 - How to verify this works
 `;
 
-export function createEpicFromTemplate(id: number, title: string): string {
-  return EPIC_TEMPLATE
-    .replace("{ID}", id.toString().padStart(3, "0"))
+export type EpicPriority = "P1" | "P2" | "P3" | "P4";
+
+export function createEpicFromTemplate(
+  id: number,
+  title: string,
+  priority: EpicPriority = "P4"
+): string {
+  return EPIC_TEMPLATE.replace("{ID}", id.toString().padStart(3, "0"))
     .replace("Title goes here", title)
+    .replace("## Priority\nP4", `## Priority\n${priority}`)
     .replace("Describe the scope of this epic - what problem does it solve?", "");
 }
 
