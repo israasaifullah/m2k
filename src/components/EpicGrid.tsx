@@ -1,6 +1,12 @@
+import { useState, useMemo } from "react";
 import { useAppStore } from "../lib/store";
 import { BookOpen, CheckCircle2, Circle } from "lucide-react";
 import type { EpicPriority } from "../types";
+
+type SortBy = "id" | "priority";
+type FilterPriority = "all" | EpicPriority;
+
+const priorityOrder: Record<EpicPriority, number> = { P1: 1, P2: 2, P3: 3, P4: 4 };
 
 const priorityConfig: Record<EpicPriority, { label: string; color: string }> = {
   P1: { label: "P1", color: "bg-red-500/20 text-red-500 border-red-500/50" },
@@ -23,11 +29,28 @@ export function EpicGrid() {
   const tickets = useAppStore((s) => s.tickets);
   const setSelectedEpic = useAppStore((s) => s.setSelectedEpic);
 
-  const sortedEpics = [...epics].sort((a, b) => {
-    const numA = parseInt(a.id.replace(/\D/g, ""), 10) || 0;
-    const numB = parseInt(b.id.replace(/\D/g, ""), 10) || 0;
-    return numA - numB;
-  });
+  const [sortBy, setSortBy] = useState<SortBy>("priority");
+  const [filterPriority, setFilterPriority] = useState<FilterPriority>("all");
+
+  const filteredAndSortedEpics = useMemo(() => {
+    let result = [...epics];
+
+    if (filterPriority !== "all") {
+      result = result.filter((e) => e.priority === filterPriority);
+    }
+
+    result.sort((a, b) => {
+      if (sortBy === "priority") {
+        const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
+        if (priorityDiff !== 0) return priorityDiff;
+      }
+      const numA = parseInt(a.id.replace(/\D/g, ""), 10) || 0;
+      const numB = parseInt(b.id.replace(/\D/g, ""), 10) || 0;
+      return numA - numB;
+    });
+
+    return result;
+  }, [epics, sortBy, filterPriority]);
 
   const getEpicStats = (epicId: string) => {
     const epicTickets = tickets.filter((t) => t.epic === epicId);
@@ -59,17 +82,42 @@ export function EpicGrid() {
   return (
     <div className="h-full flex flex-col">
       <div className="px-6 py-4 border-b border-[var(--geist-accents-2)]">
-        <h1 className="text-xl font-semibold text-[var(--geist-foreground)]">
-          Select an Epic
-        </h1>
-        <p className="text-sm text-[var(--geist-accents-5)] mt-1">
-          Choose an epic to view its kanban board
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold text-[var(--geist-foreground)]">
+              Select an Epic
+            </h1>
+            <p className="text-sm text-[var(--geist-accents-5)] mt-1">
+              Choose an epic to view its kanban board
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <select
+              value={filterPriority}
+              onChange={(e) => setFilterPriority(e.target.value as FilterPriority)}
+              className="text-sm bg-[var(--geist-accents-1)] border border-[var(--geist-accents-3)] rounded px-2 py-1 text-[var(--geist-foreground)]"
+            >
+              <option value="all">All Priorities</option>
+              <option value="P1">P1 - Critical</option>
+              <option value="P2">P2 - High</option>
+              <option value="P3">P3 - Medium</option>
+              <option value="P4">P4 - Low</option>
+            </select>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortBy)}
+              className="text-sm bg-[var(--geist-accents-1)] border border-[var(--geist-accents-3)] rounded px-2 py-1 text-[var(--geist-foreground)]"
+            >
+              <option value="priority">Sort by Priority</option>
+              <option value="id">Sort by ID</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-7xl mx-auto">
-          {sortedEpics.map((epic) => {
+          {filteredAndSortedEpics.map((epic) => {
             const stats = getEpicStats(epic.id);
             const progress = stats.total > 0 ? (stats.completed / stats.total) * 100 : 0;
             const isComplete = stats.total > 0 && stats.completed === stats.total;
