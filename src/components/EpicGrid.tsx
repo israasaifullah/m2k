@@ -1,5 +1,22 @@
 import { useAppStore } from "../lib/store";
 import { BookOpen, CheckCircle2, Circle } from "lucide-react";
+import type { EpicPriority } from "../types";
+
+const priorityConfig: Record<EpicPriority, { label: string; color: string }> = {
+  P1: { label: "P1", color: "bg-red-500/20 text-red-500 border-red-500/50" },
+  P2: { label: "P2", color: "bg-orange-500/20 text-orange-500 border-orange-500/50" },
+  P3: { label: "P3", color: "bg-yellow-500/20 text-yellow-500 border-yellow-500/50" },
+  P4: { label: "P4", color: "bg-gray-500/20 text-gray-400 border-gray-500/50" },
+};
+
+function PriorityBadge({ priority }: { priority: EpicPriority }) {
+  const config = priorityConfig[priority] || priorityConfig.P4;
+  return (
+    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded border ${config.color}`}>
+      {config.label}
+    </span>
+  );
+}
 
 export function EpicGrid() {
   const epics = useAppStore((s) => s.epics);
@@ -73,9 +90,12 @@ export function EpicGrid() {
                     <h3 className="font-medium text-[var(--geist-foreground)] group-hover:text-[var(--ds-pink-500)] transition-colors line-clamp-2">
                       {epic.title}
                     </h3>
-                    <p className="text-xs text-[var(--geist-accents-5)] mt-1 font-mono">
-                      {epic.id}
-                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-[var(--geist-accents-5)] font-mono">
+                        {epic.id}
+                      </span>
+                      <PriorityBadge priority={epic.priority} />
+                    </div>
                   </div>
                 </div>
 
