@@ -359,9 +359,12 @@ export function PRDMode() {
         // Optimistic update - add epic to store immediately
         const scopeMatch = content.match(/## Scope\s+(.*?)(?=\n##|\n\n##|$)/s);
         const scope = scopeMatch?.[1]?.trim() || "";
+        const priorityMatch = content.match(/## Priority\s+\n?\s*(P[1-4])/);
+        const priority = (priorityMatch?.[1] as "P1" | "P2" | "P3" | "P4") || "P4";
         const newEpic = {
           id: `EPIC-${paddedId}`,
           title: title,
+          priority: priority,
           scope: scope,
           tickets: [],
         };

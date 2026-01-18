@@ -10,9 +10,12 @@ export interface Ticket {
   filePath: string;
 }
 
+export type EpicPriority = "P1" | "P2" | "P3" | "P4";
+
 export interface Epic {
   id: string;
   title: string;
+  priority: EpicPriority;
   scope: string;
   tickets: string[];
 }

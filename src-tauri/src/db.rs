@@ -88,6 +88,7 @@ pub fn init_database() -> Result<(), String> {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             epic_id TEXT NOT NULL UNIQUE,
             title TEXT NOT NULL,
+            priority TEXT NOT NULL DEFAULT 'P4',
             scope TEXT,
             file_path TEXT NOT NULL,
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -142,6 +143,7 @@ pub fn init_database() -> Result<(), String> {
         "ALTER TABLE project_settings ADD COLUMN backlog_tickets INTEGER NOT NULL DEFAULT 0",
         "ALTER TABLE project_settings ADD COLUMN inprogress_tickets INTEGER NOT NULL DEFAULT 0",
         "ALTER TABLE project_settings ADD COLUMN done_tickets INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE epics ADD COLUMN priority TEXT NOT NULL DEFAULT 'P4'",
     ];
 
     for migration in &migrations {
@@ -516,9 +518,9 @@ pub fn get_backup_path(project_path: &str) -> Result<Option<String>, String> {
 pub fn upsert_epic(epic: &Epic, file_path: &str) -> Result<(), String> {
     with_connection(|conn| {
         conn.execute(
-            "INSERT OR REPLACE INTO epics (epic_id, title, scope, file_path, updated_at)
-             VALUES (?1, ?2, ?3, ?4, datetime('now'))",
-            rusqlite::params![epic.id, epic.title, epic.scope, file_path],
+            "INSERT OR REPLACE INTO epics (epic_id, title, priority, scope, file_path, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, datetime('now'))",
+            rusqlite::params![epic.id, epic.title, epic.priority, epic.scope, file_path],
         )?;
         Ok(())
     })
@@ -534,7 +536,7 @@ pub fn upsert_ticket(ticket: &Ticket) -> Result<(), String> {
 pub fn get_all_epics_snapshot(project_path: &str) -> Result<Vec<Epic>, String> {
     with_connection(|conn| {
         let mut stmt = conn.prepare(
-            "SELECT epic_id, title, scope FROM epics WHERE file_path LIKE ?1"
+            "SELECT epic_id, title, scope, COALESCE(priority, 'P4') FROM epics WHERE file_path LIKE ?1"
         )?;
 
         let pattern = format!("{}%", project_path);
@@ -543,6 +545,7 @@ pub fn get_all_epics_snapshot(project_path: &str) -> Result<Vec<Epic>, String> {
                 id: row.get(0)?,
                 title: row.get(1)?,
                 scope: row.get(2)?,
+                priority: row.get(3)?,
                 tickets: Vec::new(),
             })
         })?;

@@ -20,6 +20,7 @@ pub struct Ticket {
 pub struct Epic {
     pub id: String,
     pub title: String,
+    pub priority: String,
     pub scope: String,
     pub tickets: Vec<String>,
 }
@@ -164,12 +165,14 @@ pub fn parse_epic_file(path: &Path) -> Option<Epic> {
         .unwrap_or_else(|| file_name.to_string());
 
     let title = extract_title(&content).unwrap_or_else(|| id.clone());
+    let priority = extract_priority(&content).unwrap_or_else(|| "P4".to_string());
     let scope = extract_scope(&content).unwrap_or_default();
     let tickets = extract_ticket_refs(&content);
 
     Some(Epic {
         id,
         title,
+        priority,
         scope,
         tickets,
     })
@@ -180,6 +183,12 @@ fn extract_scope(content: &str) -> Option<String> {
     let re = Regex::new(r"(?s)## Scope\s*\n(.+?)(?:\n##|\z)").ok()?;
     re.captures(content)
         .and_then(|caps| caps.get(1).map(|m| m.as_str().trim().to_string()))
+}
+
+fn extract_priority(content: &str) -> Option<String> {
+    let re = Regex::new(r"## Priority\s*\n\s*(P[1-4])").ok()?;
+    re.captures(content)
+        .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
 }
 
 fn extract_ticket_refs(content: &str) -> Vec<String> {
