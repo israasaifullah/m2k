@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Pencil, ChevronDown, ChevronRight, Copy, Check, X, Play, Square, Loader2 } from "lucide-react";
+import { Pencil, Copy, Check, X, Play, Square, Loader2 } from "lucide-react";
 import type { Ticket } from "../types";
 import { useAppStore } from "../lib/store";
 import { invoke } from "@tauri-apps/api/core";
@@ -10,26 +10,6 @@ interface Props {
   ticket: Ticket;
 }
 
-const epicColors: Record<string, string> = {
-  "EPIC-001": "bg-blue-600",
-  "EPIC-002": "bg-emerald-600",
-  "EPIC-003": "bg-violet-600",
-  "EPIC-004": "bg-orange-600",
-  "EPIC-005": "bg-pink-600",
-  "EPIC-006": "bg-cyan-600",
-  "EPIC-007": "bg-rose-600",
-  "EPIC-008": "bg-amber-600",
-  "EPIC-009": "bg-teal-600",
-};
-
-function PulsingDot() {
-  return (
-    <span className="relative flex h-2 w-2">
-      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--geist-success)] opacity-75"></span>
-      <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--geist-success)]"></span>
-    </span>
-  );
-}
 
 export function TicketCard({ ticket }: Props) {
   const [expanded, setExpanded] = useState(true);
@@ -40,7 +20,6 @@ export function TicketCard({ ticket }: Props) {
   const [showOutput, setShowOutput] = useState(false);
   const setPrdState = useAppStore((s) => s.setPrdState);
   const setViewMode = useAppStore((s) => s.setViewMode);
-  const epicColor = epicColors[ticket.epic] || "bg-[var(--geist-accents-4)]";
   const isInProgress = ticket.status === "in_progress";
   const projectPath = useAppStore((s) => s.projectPath);
 
@@ -159,14 +138,14 @@ export function TicketCard({ ticket }: Props) {
     }
   };
 
-  const baseClass = "rounded-lg p-4 min-h-[90px] cursor-pointer transition-all duration-200 ease-out animate-fade-in hover:scale-[1.01] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]";
+  const baseClass = "rounded p-2 cursor-pointer transition-all duration-200 ease-out animate-fade-in hover:bg-[var(--geist-accents-1)] focus:outline-none focus:ring-1 focus:ring-[var(--geist-accents-3)]";
   const cardClass = isInProgress
-    ? `${baseClass} bg-[var(--geist-accents-1)] hover:bg-[var(--geist-accents-2)] border border-[var(--geist-success)] animate-pulse-subtle`
-    : `${baseClass} bg-[var(--geist-background)] hover:bg-[var(--geist-accents-1)] border border-[var(--geist-accents-2)]`;
+    ? `${baseClass} bg-[var(--geist-accents-1)] border-l-2 border-[var(--geist-success)]`
+    : `${baseClass} bg-transparent`;
 
   return (
     <article
-      className={cardClass}
+      className={`group ${cardClass}`}
       onClick={toggle}
       onKeyDown={handleKeyDown}
       tabIndex={0}
@@ -174,95 +153,68 @@ export function TicketCard({ ticket }: Props) {
       aria-expanded={expanded}
       aria-label={`${ticket.id}: ${ticket.title}${isInProgress ? ", currently in progress" : ""}`}
     >
-      <div className="flex items-center gap-2 flex-wrap">
-        {isInProgress && (
-          <>
-            <PulsingDot />
-            <span className="sr-only">In progress</span>
-          </>
-        )}
-        <span className={`${epicColor} text-white text-xs px-1.5 py-0.5 rounded font-medium`} aria-label={`Epic ${ticket.epic}`}>
-          {ticket.epic}
-        </span>
-        <span className="text-xs text-[var(--geist-accents-5)] font-mono">
-          {ticket.id}
-        </span>
-        <div className="ml-auto flex items-center gap-1">
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-[var(--geist-accents-4)] font-mono">{ticket.id}</span>
+        <h3 className="flex-1 text-sm truncate">{ticket.title}</h3>
+        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           {execStatus === "idle" && (
             <button
               onClick={handleExecute}
-              className="text-xs text-[var(--geist-success)] hover:text-[var(--geist-success-dark)] transition-colors px-1.5 py-0.5 rounded hover:bg-[var(--geist-success-lighter)] focus:outline-none focus:ring-1 focus:ring-[var(--geist-success)] flex items-center gap-1"
+              className="p-1 text-[var(--geist-accents-4)] hover:text-[var(--monokai-green)] transition-colors"
               aria-label={`Execute ${ticket.id}`}
-              title="Execute ticket with Claude"
+              title="Execute"
             >
-              <Play size={12} aria-hidden="true" />
-              Execute
+              <Play size={14} />
             </button>
           )}
           {(execStatus === "queued" || execStatus === "running") && (
             <button
               onClick={handleCancel}
-              className="text-xs text-[var(--geist-warning)] hover:text-[var(--geist-warning-dark)] transition-colors px-1.5 py-0.5 rounded hover:bg-[var(--geist-warning-lighter)] focus:outline-none focus:ring-1 focus:ring-[var(--geist-warning)] flex items-center gap-1"
+              className="p-1 text-[var(--monokai-orange)] hover:text-[var(--monokai-yellow)] transition-colors"
               aria-label={`Cancel ${ticket.id}`}
-              title="Cancel execution"
+              title="Cancel"
             >
-              {execStatus === "queued" ? <Loader2 size={12} className="animate-spin" aria-hidden="true" /> : <Square size={12} aria-hidden="true" />}
-              {execStatus === "queued" ? "Queued" : "Cancel"}
+              {execStatus === "queued" ? <Loader2 size={14} className="animate-spin" /> : <Square size={14} />}
             </button>
           )}
           {execStatus === "completed" && (
-            <span className="text-xs text-[var(--geist-success)] px-1.5 py-0.5 flex items-center gap-1">
-              <Check size={12} aria-hidden="true" />
-              Done
+            <span className="p-1 text-[var(--monokai-green)]" title="Completed">
+              <Check size={14} />
             </span>
           )}
           {execStatus === "failed" && (
-            <span className="text-xs text-[var(--geist-error)] px-1.5 py-0.5 flex items-center gap-1">
-              <X size={12} aria-hidden="true" />
-              Failed
+            <span className="p-1 text-[var(--monokai-red)]" title="Failed">
+              <X size={14} />
             </span>
           )}
           <button
             onClick={handleCopyPath}
-            className="text-xs text-[var(--geist-accents-5)] hover:text-[var(--geist-foreground)] transition-colors px-1.5 py-0.5 rounded hover:bg-[var(--geist-accents-2)] focus:outline-none focus:ring-1 focus:ring-[var(--geist-success)] flex items-center gap-1"
+            className="p-1 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors"
             aria-label={`Copy path for ${ticket.id}`}
-            title="Copy file path"
+            title="Copy path"
           >
-            {copied ? <Check size={12} className="text-[var(--geist-success)]" /> : <Copy size={12} />}
+            {copied ? <Check size={14} className="text-[var(--monokai-green)]" /> : <Copy size={14} />}
           </button>
           <button
             onClick={handleEdit}
-            className="text-xs text-[var(--geist-accents-5)] hover:text-[var(--geist-foreground)] transition-colors px-1.5 py-0.5 rounded hover:bg-[var(--geist-accents-2)] focus:outline-none focus:ring-1 focus:ring-[var(--geist-success)] flex items-center gap-1"
+            className="p-1 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors"
             aria-label={`Edit ${ticket.id}`}
+            title="Edit"
           >
-            <Pencil size={12} aria-hidden="true" />
-            Edit
+            <Pencil size={14} />
           </button>
           <button
             onClick={handleDelete}
-            className="text-xs text-[var(--geist-error)] hover:text-[var(--geist-error-dark)] transition-colors px-1.5 py-0.5 rounded hover:bg-[var(--geist-error-lighter)] focus:outline-none focus:ring-1 focus:ring-[var(--geist-error)] flex items-center gap-1"
+            className="p-1 text-[var(--geist-accents-4)] hover:text-[var(--monokai-red)] transition-colors"
             aria-label={`Delete ${ticket.id}`}
-            title="Delete ticket"
+            title="Delete"
           >
-            <X size={12} aria-hidden="true" />
+            <X size={14} />
           </button>
         </div>
-        {isInProgress && (
-          <span className="text-xs text-[var(--geist-success)] font-medium animate-pulse" aria-hidden="true">
-            Working...
-          </span>
-        )}
-      </div>
-      <div className="flex items-center gap-1.5 mt-2">
-        {expanded ? (
-          <ChevronDown size={14} className="text-[var(--geist-accents-5)]" aria-hidden="true" />
-        ) : (
-          <ChevronRight size={14} className="text-[var(--geist-accents-5)]" aria-hidden="true" />
-        )}
-        <h3 className="font-medium text-sm">{ticket.title}</h3>
       </div>
       {expanded && ticket.description && (
-        <p className="text-xs text-[var(--geist-accents-5)] mt-2 animate-slide-up">
+        <p className="text-xs text-[var(--geist-accents-4)] mt-1 pl-10">
           {ticket.description}
         </p>
       )}
