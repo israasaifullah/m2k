@@ -18,12 +18,7 @@ function Header() {
   return (
     <div className="flex items-center justify-end gap-1 px-2 py-1 border-b border-[var(--geist-accents-2)] bg-[var(--geist-accents-1)]">
       <EpicFilter />
-      {selectedEpic && (
-        <>
-          <div className="w-px h-4 bg-[var(--geist-accents-3)] mx-1" />
-          <EpicExecuteButton epic={selectedEpic} />
-        </>
-      )}
+      {selectedEpic && <EpicExecuteButton epic={selectedEpic} />}
     </div>
   );
 }
