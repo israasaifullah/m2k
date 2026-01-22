@@ -5,7 +5,6 @@ import { EpicGrid } from "./components/EpicGrid";
 import { PRDMode } from "./components/PRDMode";
 import { SettingsPage } from "./components/SettingsPage";
 import { ResourceBoard } from "./components/ResourceBoard";
-import { Terminal } from "./components/Terminal";
 import { Sidebar } from "./components/Sidebar";
 import { useAppStore } from "./lib/store";
 import { useProjectLoader } from "./hooks/useProjectLoader";
@@ -61,9 +60,6 @@ function App() {
           {viewMode === "prd" && <PRDMode />}
           {viewMode === "resources" && <ResourceBoard />}
           {viewMode === "settings" && <SettingsPage />}
-        </div>
-        <div className="border-t border-[var(--geist-accents-2)]">
-          <Terminal />
         </div>
       </div>
 
