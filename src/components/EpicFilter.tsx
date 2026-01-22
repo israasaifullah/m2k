@@ -31,8 +31,8 @@ export function EpicFilter() {
         value: epic.id,
         label: `${epic.id}: ${epic.title}`,
       }))}
-      placeholder="All Epics"
-      variant="pill"
+      placeholder="Epic"
+      variant="minimal"
       showChevron={true}
       aria-label="Filter tickets by epic"
     />

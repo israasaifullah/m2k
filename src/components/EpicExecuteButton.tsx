@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Play, Loader2, Check, X } from "lucide-react";
+import { Play, Loader2 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useAppStore } from "../lib/store";
@@ -11,7 +11,6 @@ interface Props {
 export function EpicExecuteButton({ epic }: Props) {
   const [executing, setExecuting] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
-  const [currentTicket, setCurrentTicket] = useState<string | null>(null);
   const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set());
   const [failedTasks, setFailedTasks] = useState<Set<string>>(new Set());
   const tickets = useAppStore((s) => s.tickets);
@@ -46,7 +45,6 @@ export function EpicExecuteButton({ epic }: Props) {
 
     for (let i = 0; i < epicTickets.length; i++) {
       const ticket = epicTickets[i];
-      setCurrentTicket(ticket.id);
       setProgress({ current: i + 1, total: epicTickets.length });
 
       try {
@@ -72,48 +70,25 @@ export function EpicExecuteButton({ epic }: Props) {
     }
 
     setExecuting(false);
-    setCurrentTicket(null);
   };
 
   if (epicTickets.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center">
       {executing ? (
-        <div className="flex items-center gap-2 text-xs">
-          <Loader2 size={14} className="animate-spin text-[var(--geist-warning)]" />
-          <span className="text-[var(--geist-accents-6)]">
-            Executing {progress.current}/{progress.total}
-          </span>
-          {currentTicket && (
-            <span className="text-[var(--geist-accents-5)]">({currentTicket})</span>
-          )}
+        <div className="flex items-center gap-1 text-xs text-[var(--monokai-orange)]">
+          <Loader2 size={16} className="animate-spin" />
+          <span>{progress.current}/{progress.total}</span>
         </div>
       ) : (
         <button
           onClick={handleExecuteEpic}
-          className="text-xs text-[var(--geist-success)] hover:text-[var(--geist-success-dark)] transition-colors px-2 py-1 rounded hover:bg-[var(--geist-success-lighter)] focus:outline-none focus:ring-1 focus:ring-[var(--geist-success)] flex items-center gap-1 border border-[var(--geist-success)]"
-          title="Execute all tickets in epic"
+          className="p-1.5 text-[var(--geist-accents-4)] hover:text-[var(--monokai-green)] transition-colors"
+          title={`Execute ${epicTickets.length} tickets`}
         >
-          <Play size={14} />
-          Execute Epic ({epicTickets.length})
+          <Play size={16} />
         </button>
-      )}
-      {(completedTasks.size > 0 || failedTasks.size > 0) && !executing && (
-        <div className="flex items-center gap-2 text-xs">
-          {completedTasks.size > 0 && (
-            <span className="flex items-center gap-1 text-[var(--geist-success)]">
-              <Check size={12} />
-              {completedTasks.size}
-            </span>
-          )}
-          {failedTasks.size > 0 && (
-            <span className="flex items-center gap-1 text-[var(--geist-error)]">
-              <X size={12} />
-              {failedTasks.size}
-            </span>
-          )}
-        </div>
       )}
     </div>
   );
