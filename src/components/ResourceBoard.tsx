@@ -29,14 +29,14 @@ function getFileIcon(fileName: string) {
   switch (ext) {
     case 'md':
     case 'markdown':
-      return <FileText size={14} />;
+      return <FileText size={12} />;
     case 'png':
     case 'jpg':
     case 'jpeg':
     case 'gif':
     case 'svg':
     case 'webp':
-      return <Image size={14} />;
+      return <Image size={12} />;
     case 'js':
     case 'ts':
     case 'jsx':
@@ -47,9 +47,9 @@ function getFileIcon(fileName: string) {
     case 'java':
     case 'c':
     case 'cpp':
-      return <FileCode size={14} />;
+      return <FileCode size={12} />;
     default:
-      return <File size={14} />;
+      return <File size={12} />;
   }
 }
 
@@ -73,21 +73,21 @@ function TreeItem({ node, level, selectedPath, expandedPaths, onToggleExpand, on
           e.preventDefault();
           onContextMenu(node, e);
         }}
-        className={`w-full px-2 py-1.5 text-sm flex items-center gap-2 hover:bg-[var(--geist-accents-1)] transition-colors ${
-          isSelected ? "bg-[var(--geist-accents-2)] text-[var(--geist-foreground)]" : "text-[var(--geist-accents-5)]"
+        className={`w-full px-1 py-0.5 text-xs flex items-center gap-1.5 hover:bg-[var(--geist-accents-2)] transition-colors ${
+          isSelected ? "bg-[var(--geist-accents-2)] text-[var(--geist-foreground)]" : "text-[var(--geist-accents-4)]"
         }`}
-        style={{ paddingLeft: `${level * 12 + 8}px` }}
+        style={{ paddingLeft: `${level * 10 + 6}px` }}
       >
         {node.isDirectory ? (
           <>
-            {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            <Folder size={14} />
+            {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            <Folder size={12} />
             <span className="flex-1 text-left truncate">{node.name}</span>
-            {node.children && <span className="text-xs opacity-50">{node.children.length}</span>}
+            {node.children && <span className="text-[10px] opacity-50">{node.children.length}</span>}
           </>
         ) : (
           <>
-            <span className="w-3.5" />
+            <span className="w-3" />
             {getFileIcon(node.name)}
             <span className="flex-1 text-left truncate">{node.name}</span>
           </>
@@ -1082,65 +1082,65 @@ export function ResourceBoard() {
 
   return (
     <div className="h-full flex">
-      <div className="w-64 border-r border-[var(--geist-accents-2)] flex flex-col">
-        <div className="p-3 border-b border-[var(--geist-accents-2)]">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-medium">Resources</h2>
-            <div className="flex gap-1">
+      <div className="w-52 border-r border-[var(--geist-accents-2)] flex flex-col bg-[var(--geist-accents-1)]">
+        <div className="px-2 py-1.5 border-b border-[var(--geist-accents-2)]">
+          <div className="flex items-center justify-between mb-1.5">
+            <h2 className="text-xs font-medium text-[var(--geist-accents-4)]">Resources</h2>
+            <div className="flex">
               <button
                 onClick={() => {
                   setNewFileParentPath(resourcePath);
                   setShowNewFileDialog(true);
                 }}
-                className="p-1 hover:bg-[var(--geist-accents-1)] rounded"
+                className="p-1 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors"
                 title="New file"
               >
-                <Plus size={16} />
+                <Plus size={14} />
               </button>
               <button
                 onClick={() => setShowNewFolderDialog(true)}
-                className="p-1 hover:bg-[var(--geist-accents-1)] rounded"
+                className="p-1 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors"
                 title="New folder"
               >
-                <FolderPlus size={16} />
+                <FolderPlus size={14} />
               </button>
             </div>
           </div>
-          <div className="relative mb-2">
-            <Search size={14} className="absolute left-2 top-2 text-[var(--geist-accents-4)]" />
+          <div className="relative mb-1.5">
+            <Search size={12} className="absolute left-2 top-1.5 text-[var(--geist-accents-4)]" />
             <input
               type="text"
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-7 py-1.5 text-sm bg-[var(--geist-background)] border border-[var(--geist-accents-2)] rounded focus:outline-none focus:border-[var(--geist-accents-4)]"
+              className="w-full pl-7 pr-6 py-1 text-xs bg-[var(--geist-background)] border border-[var(--geist-accents-2)] rounded focus:outline-none focus:border-[var(--geist-accents-4)]"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-2 top-2 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)]"
+                className="absolute right-2 top-1.5 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)]"
               >
-                <X size={14} />
+                <X size={12} />
               </button>
             )}
           </div>
           <button
             onClick={() => handleFilePickerClick()}
             disabled={uploading}
-            className="w-full mt-2 px-3 py-2 text-sm bg-[var(--geist-success)] text-white rounded hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full px-2 py-1 text-xs bg-[var(--monokai-green)] text-[var(--geist-background)] rounded hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-1.5"
           >
-            <Upload size={16} />
+            <Upload size={12} />
             {uploading ? "Uploading..." : "Upload Files"}
           </button>
           {uploadProgress.length > 0 && (
-            <div className="mt-2 p-2 bg-[var(--geist-accents-1)] rounded text-xs space-y-1">
+            <div className="mt-1 p-1.5 bg-[var(--geist-accents-2)] rounded text-[10px] space-y-0.5">
               {uploadProgress.map((msg, idx) => (
-                <div key={idx} className="text-[var(--geist-accents-6)]">{msg}</div>
+                <div key={idx} className="text-[var(--geist-accents-5)]">{msg}</div>
               ))}
             </div>
           )}
         </div>
-        <div className="flex-1 overflow-y-auto py-1 relative">
+        <div className="flex-1 overflow-y-auto py-0.5 relative">
           {filteredTree?.children?.map((child) => (
             <TreeItem
               key={child.path}
