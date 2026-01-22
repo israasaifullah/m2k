@@ -7,4 +7,4 @@ Replace the current Geist theme with classic Monokai color scheme across the ent
 
 | ID | Description | Status |
 |----|-------------|--------|
-| T-131 | Implement Monokai color scheme | inprogress |
+| T-131 | Implement Monokai color scheme | done |
