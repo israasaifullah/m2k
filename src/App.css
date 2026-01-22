@@ -2,20 +2,27 @@
 
 :root {
   font-family: "Geist Sans", system-ui, sans-serif;
-  --geist-background: #000;
-  --geist-foreground: #fff;
-  --geist-accents-1: #111;
-  --geist-accents-2: #333;
-  --geist-accents-3: #444;
-  --geist-accents-4: #666;
-  --geist-accents-5: #888;
-  --geist-accents-6: #999;
-  --geist-accents-7: #eaeaea;
-  --geist-accents-8: #fafafa;
-  --ds-pink-500: #ec4899;
-  --geist-success: var(--ds-pink-500);
-  --geist-error: #e00;
-  --geist-warning: #f5a623;
+  /* Monokai color scheme */
+  --geist-background: #272822;
+  --geist-foreground: #F8F8F2;
+  --geist-accents-1: #1e1f1c;
+  --geist-accents-2: #3e3d32;
+  --geist-accents-3: #49483e;
+  --geist-accents-4: #75715e;
+  --geist-accents-5: #a6a6a6;
+  --geist-accents-6: #c0c0c0;
+  --geist-accents-7: #e6db74;
+  --geist-accents-8: #f8f8f2;
+  --monokai-red: #F92672;
+  --monokai-orange: #FD971F;
+  --monokai-yellow: #E6DB74;
+  --monokai-green: #A6E22E;
+  --monokai-cyan: #66D9EF;
+  --monokai-purple: #AE81FF;
+  --monokai-comment: #75715E;
+  --geist-success: var(--monokai-green);
+  --geist-error: var(--monokai-red);
+  --geist-warning: var(--monokai-orange);
 }
 
 body {
@@ -30,11 +37,11 @@ code, pre, .font-mono {
 @keyframes pulse-subtle {
   0%, 100% {
     opacity: 1;
-    box-shadow: 0 0 8px rgba(236, 72, 153, 0.4);
+    box-shadow: 0 0 8px rgba(166, 226, 46, 0.4);
   }
   50% {
     opacity: 0.95;
-    box-shadow: 0 0 20px rgba(236, 72, 153, 0.6);
+    box-shadow: 0 0 20px rgba(166, 226, 46, 0.6);
   }
 }
 

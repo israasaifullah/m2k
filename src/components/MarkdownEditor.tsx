@@ -15,39 +15,46 @@ export interface MarkdownEditorHandle {
   triggerSave: () => void;
 }
 
-// Define custom Geist dark theme
-const defineGeistTheme = (monaco: typeof import("monaco-editor")) => {
-  monaco.editor.defineTheme("geist-dark", {
+// Define custom Monokai dark theme
+const defineMonokaiTheme = (monaco: typeof import("monaco-editor")) => {
+  monaco.editor.defineTheme("monokai", {
     base: "vs-dark",
     inherit: true,
     rules: [
-      { token: "comment", foreground: "666666", fontStyle: "italic" },
-      { token: "keyword", foreground: "0070f3" },
-      { token: "string", foreground: "50e3c2" },
-      { token: "number", foreground: "f5a623" },
-      { token: "type", foreground: "7928ca" },
+      { token: "comment", foreground: "75715E", fontStyle: "italic" },
+      { token: "keyword", foreground: "F92672" },
+      { token: "string", foreground: "E6DB74" },
+      { token: "number", foreground: "AE81FF" },
+      { token: "type", foreground: "66D9EF", fontStyle: "italic" },
+      { token: "function", foreground: "A6E22E" },
+      { token: "variable", foreground: "F8F8F2" },
+      { token: "constant", foreground: "AE81FF" },
+      { token: "parameter", foreground: "FD971F", fontStyle: "italic" },
+      { token: "tag", foreground: "F92672" },
+      { token: "attribute.name", foreground: "A6E22E" },
+      { token: "attribute.value", foreground: "E6DB74" },
     ],
     colors: {
-      "editor.background": "#000000",
-      "editor.foreground": "#ffffff",
-      "editor.lineHighlightBackground": "#111111",
-      "editor.selectionBackground": "#0070f333",
-      "editorCursor.foreground": "#0070f3",
-      "editorLineNumber.foreground": "#666666",
-      "editorLineNumber.activeForeground": "#888888",
-      "editor.inactiveSelectionBackground": "#111111",
-      "editorIndentGuide.background1": "#333333",
-      "editorIndentGuide.activeBackground1": "#444444",
-      "scrollbarSlider.background": "#33333380",
-      "scrollbarSlider.hoverBackground": "#44444480",
-      "scrollbarSlider.activeBackground": "#55555580",
+      "editor.background": "#272822",
+      "editor.foreground": "#F8F8F2",
+      "editor.lineHighlightBackground": "#3e3d32",
+      "editor.selectionBackground": "#49483e",
+      "editorCursor.foreground": "#F8F8F0",
+      "editorLineNumber.foreground": "#75715E",
+      "editorLineNumber.activeForeground": "#A6A6A6",
+      "editor.inactiveSelectionBackground": "#3e3d3280",
+      "editorIndentGuide.background1": "#3e3d32",
+      "editorIndentGuide.activeBackground1": "#75715E",
+      "scrollbarSlider.background": "#49483e80",
+      "scrollbarSlider.hoverBackground": "#75715E80",
+      "scrollbarSlider.activeBackground": "#A6A6A680",
     },
   });
 };
 
 // Configure Monaco loader
 loader.init().then((monaco) => {
-  defineGeistTheme(monaco);
+  defineMonokaiTheme(monaco);
 });
 
 export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
@@ -153,7 +160,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
           <Editor
             height="100%"
             defaultLanguage="markdown"
-            theme="geist-dark"
+            theme="monokai"
             value={value}
             onChange={handleChange}
             onMount={handleEditorMount}

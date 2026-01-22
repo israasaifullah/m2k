@@ -47,27 +47,27 @@ export function Terminal() {
       fontSize: 13,
       fontFamily: "Geist Mono, Monaco, Menlo, monospace",
       theme: {
-        background: "#0a0a0a",
-        foreground: "#ededed",
-        cursor: "#ededed",
-        cursorAccent: "#0a0a0a",
-        selectionBackground: "#3b3b3b",
-        black: "#0a0a0a",
-        red: "#ff6b6b",
-        green: "#4ade80",
-        yellow: "#fbbf24",
-        blue: "#60a5fa",
-        magenta: "#c084fc",
-        cyan: "#22d3ee",
-        white: "#ededed",
-        brightBlack: "#666666",
-        brightRed: "#ff8a8a",
-        brightGreen: "#86efac",
-        brightYellow: "#fcd34d",
-        brightBlue: "#93c5fd",
-        brightMagenta: "#d8b4fe",
-        brightCyan: "#67e8f9",
-        brightWhite: "#ffffff",
+        background: "#272822",
+        foreground: "#F8F8F2",
+        cursor: "#F8F8F0",
+        cursorAccent: "#272822",
+        selectionBackground: "#49483E",
+        black: "#272822",
+        red: "#F92672",
+        green: "#A6E22E",
+        yellow: "#E6DB74",
+        blue: "#66D9EF",
+        magenta: "#AE81FF",
+        cyan: "#66D9EF",
+        white: "#F8F8F2",
+        brightBlack: "#75715E",
+        brightRed: "#F92672",
+        brightGreen: "#A6E22E",
+        brightYellow: "#FD971F",
+        brightBlue: "#66D9EF",
+        brightMagenta: "#AE81FF",
+        brightCyan: "#66D9EF",
+        brightWhite: "#F9F8F5",
       },
     });
 
@@ -289,7 +289,7 @@ export function Terminal() {
   }, [isPaused]);
 
   return (
-    <div className={`flex flex-col bg-[#0a0a0a] transition-all duration-200 ${isCollapsed ? "h-8" : "h-[500px]"}`}>
+    <div className={`flex flex-col bg-[#272822] transition-all duration-200 ${isCollapsed ? "h-8" : "h-[500px]"}`}>
       <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[var(--geist-accents-2)] bg-[var(--geist-background)]">
         <div
           className="flex items-center gap-2 flex-1 cursor-pointer select-none hover:opacity-80"
