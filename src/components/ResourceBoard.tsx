@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { ChevronRight, ChevronDown, Folder, X, Plus, Edit2, Trash2, Save, Upload, Copy } from "lucide-react";
 import { useAppStore } from "../lib/store";
 import { invoke } from "@tauri-apps/api/core";
@@ -9,6 +11,11 @@ import { ResizeHandle } from "./ResizeHandle";
 import { SwaggerPreview } from "./SwaggerPreview";
 import { ExcalidrawPreview } from "./ExcalidrawPreview";
 import { isOpenAPIExtension, parseOpenAPIContent, type OpenAPISpec } from "../lib/openapi";
+
+function isMarkdownFile(path: string): boolean {
+  const ext = path.split('.').pop()?.toLowerCase();
+  return ext === 'md' || ext === 'markdown';
+}
 
 interface FileNode {
   name: string;
@@ -144,9 +151,6 @@ function FilePreview({ path }: FilePreviewProps) {
 
       setContent(fileContent);
       setEditContent(fileContent);
-      if (!isExcalidrawFile) {
-        setEditing(true);
-      }
     } catch (err) {
       setError(String(err));
       setContent(null);
@@ -278,9 +282,15 @@ function FilePreview({ path }: FilePreviewProps) {
               <MarkdownEditor value={editContent} onChange={handleEditorChange} filePath={path} />
             </div>
           ) : (
-            <div className="h-full overflow-auto p-6">
-              <pre className="text-sm whitespace-pre-wrap font-mono">{content}</pre>
-            </div>
+            isMarkdownFile(path) ? (
+              <div className="h-full overflow-auto p-6 markdown-preview">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+              </div>
+            ) : (
+              <div className="h-full">
+                <MarkdownEditor value={content} onChange={() => {}} filePath={path} readOnly />
+              </div>
+            )
           )}
         </div>
       </div>

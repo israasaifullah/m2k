@@ -226,6 +226,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
               readOnly,
               fontSize: 14,
               fontFamily: '"Fira Code", monospace',
+              fontLigatures: true,
               lineHeight: 1.6,
               minimap: { enabled: false },
               scrollBeyondLastLine: false,
