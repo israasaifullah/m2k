@@ -6,7 +6,7 @@ import { validateEpic, validateTicket } from "../lib/validation";
 import { Toast, useToast } from "./Toast";
 import { invoke } from "@tauri-apps/api/core";
 import { FileText, Image, FolderOpen, File, Save, Columns3, X, ScrollText, Ticket, Plus } from "lucide-react";
-import { Select } from "./Select";
+import { SearchableSelect } from "./SearchableSelect";
 
 interface FileNode {
   name: string;
@@ -205,17 +205,21 @@ interface EpicSelectorProps {
 function EpicSelector({ value, onChange, disabled }: EpicSelectorProps) {
   const epics = useAppStore((s) => s.epics);
 
+  const sortedEpics = [...epics].sort((a, b) => {
+    const numA = parseInt(a.id.replace(/\D/g, ""), 10) || 0;
+    const numB = parseInt(b.id.replace(/\D/g, ""), 10) || 0;
+    return numA - numB;
+  });
+
   return (
-    <Select
+    <SearchableSelect
       value={value}
       onChange={onChange}
-      options={epics.map((epic) => ({
+      options={sortedEpics.map((epic) => ({
         value: epic.id,
         label: `${epic.id}: ${epic.title}`,
       }))}
       placeholder="Epic"
-      variant="minimal"
-      showChevron={true}
       disabled={disabled}
       aria-label="Select epic"
     />
@@ -501,7 +505,7 @@ export function PRDMode() {
             className="p-1.5 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors disabled:opacity-50"
             title="Create new"
           >
-            <Plus size={16} />
+            <Plus size={15} />
           </button>
         )}
         {prdState.docType === "ticket" && selectedEpic && (
@@ -510,7 +514,7 @@ export function PRDMode() {
             className="p-1.5 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors"
             title={`View ${selectedEpic} Board`}
           >
-            <Columns3 size={16} />
+            <Columns3 size={15} />
           </button>
         )}
         <button
@@ -518,7 +522,7 @@ export function PRDMode() {
           className="p-1.5 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors"
           title="Insert resource"
         >
-          <FolderOpen size={16} />
+          <FolderOpen size={15} />
         </button>
         <VimToggle />
         <div className="w-px h-4 bg-[var(--geist-accents-3)] mx-1" />
@@ -531,7 +535,7 @@ export function PRDMode() {
           className="p-1.5 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors disabled:opacity-50"
           title="Cancel"
         >
-          <X size={16} />
+          <X size={15} />
         </button>
         <button
           onClick={handleSave}
@@ -539,7 +543,7 @@ export function PRDMode() {
           className="p-1.5 text-[var(--geist-accents-4)] hover:text-[var(--monokai-green)] transition-colors disabled:opacity-50"
           title={saving ? "Saving..." : "Save"}
         >
-          <Save size={16} />
+          <Save size={15} />
         </button>
       </div>
       {isEditing && prdState.editingPath && (

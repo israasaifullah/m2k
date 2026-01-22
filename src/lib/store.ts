@@ -33,6 +33,8 @@ interface AppState {
   sidebarCollapsed: boolean;
   saveCallback: (() => void) | null;
   projectLoading: boolean;
+  sidebarWidth: number;
+  resourcePanelWidth: number;
   setTickets: (tickets: Ticket[]) => void;
   setEpics: (epics: Epic[]) => void;
   setSelectedEpic: (epicId: string | null) => void;
@@ -48,6 +50,8 @@ interface AppState {
   setSaveCallback: (callback: (() => void) | null) => void;
   triggerSave: () => void;
   setProjectLoading: (loading: boolean) => void;
+  setSidebarWidth: (width: number) => void;
+  setResourcePanelWidth: (width: number) => void;
 }
 
 const defaultPrdState: PrdState = {
@@ -71,6 +75,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   sidebarCollapsed: false,
   saveCallback: null,
   projectLoading: false,
+  sidebarWidth: 176,
+  resourcePanelWidth: 220,
   setTickets: (tickets) => set({ tickets }),
   setEpics: (epics) => set({ epics }),
   setSelectedEpic: (epicId) => set({ selectedEpic: epicId }),
@@ -95,4 +101,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
   setProjectLoading: (loading) => set({ projectLoading: loading }),
+  setSidebarWidth: (width) => set({ sidebarWidth: width }),
+  setResourcePanelWidth: (width) => set({ resourcePanelWidth: width }),
 }));

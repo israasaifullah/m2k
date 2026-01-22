@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { useAppStore } from "../lib/store";
 import { Toast, useToast } from "./Toast";
 import { Toggle } from "./Toggle";
+import { X } from "lucide-react";
 import packageJson from "../../package.json";
 
 interface ProjectSettings {
@@ -22,11 +23,8 @@ export function SettingsPage() {
   const vimMode = useAppStore((s) => s.vimMode);
   const setVimMode = useAppStore((s) => s.setVimMode);
   const projectPath = useAppStore((s) => s.projectPath);
-  const [apiKey, setApiKey] = useState("");
-  const [showKey, setShowKey] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [hasExistingKey, setHasExistingKey] = useState(false);
   const [projectSettings, setProjectSettings] = useState<ProjectSettings | null>(null);
   const [epicCounter, setEpicCounter] = useState(0);
   const [ticketCounter, setTicketCounter] = useState(0);
@@ -38,9 +36,6 @@ export function SettingsPage() {
   useEffect(() => {
     const init = async () => {
       try {
-        const exists = await invoke<boolean>("has_api_key");
-        setHasExistingKey(exists);
-
         // Load project settings if project is loaded
         if (projectPath) {
           const settings = await invoke<ProjectSettings | null>("get_project_settings", {
@@ -70,54 +65,8 @@ export function SettingsPage() {
     init();
   }, [projectPath]);
 
-  const handleCancel = () => {
+  const handleClose = () => {
     setViewMode("kanban");
-  };
-
-  const handleSave = async () => {
-    if (!apiKey.trim()) {
-      showToast("Please enter an API key", "error");
-      return;
-    }
-
-    // Basic format validation
-    if (!apiKey.trim().startsWith("sk-ant-")) {
-      showToast("Invalid key format. Key should start with 'sk-ant-'", "error");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      // Validate with Anthropic API
-      await invoke("validate_api_key", { apiKey: apiKey.trim() });
-
-      // Save if valid
-      await invoke("save_api_key", { apiKey: apiKey.trim() });
-      showToast("API key validated and saved!", "success");
-      setHasExistingKey(true);
-      setApiKey("");
-      setTimeout(() => setViewMode("kanban"), 1000);
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      showToast(errMsg, "error");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleClear = async () => {
-    setSaving(true);
-    try {
-      await invoke("delete_api_key");
-      setHasExistingKey(false);
-      setApiKey("");
-      showToast("API key cleared", "success");
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : String(err);
-      showToast(errMsg, "error");
-    } finally {
-      setSaving(false);
-    }
   };
 
   const handleUpdateCounters = async () => {
@@ -206,8 +155,6 @@ export function SettingsPage() {
     }
   };
 
-  const maskedKey = apiKey ? "sk-ant-" + "*".repeat(Math.max(0, apiKey.length - 10)) + apiKey.slice(-4) : "";
-
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -218,113 +165,31 @@ export function SettingsPage() {
 
   return (
     <div className="h-full flex flex-col animate-fade-in">
-      <div className="px-4 py-3 border-b border-[var(--geist-accents-2)] flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-4">
-          <span className="text-sm font-medium text-[var(--geist-foreground)]">
-            Settings
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleCancel}
-            disabled={saving}
-            className="px-3 py-1.5 text-sm border border-[var(--geist-accents-3)] rounded-md hover:bg-[var(--geist-accents-1)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving || !apiKey.trim()}
-            className="px-3 py-1.5 text-sm bg-[var(--geist-success)] text-white rounded-md hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50"
-          >
-            {saving ? "Validating..." : "Save"}
-          </button>
-        </div>
+      <div className="px-2 py-1 border-b border-[var(--geist-accents-2)] bg-[var(--geist-accents-1)] flex items-center justify-between">
+        <span className="text-xs text-[var(--geist-accents-4)]">Settings</span>
+        <button
+          onClick={handleClose}
+          className="p-1.5 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors"
+          title="Close"
+        >
+          <X size={15} />
+        </button>
       </div>
 
       <div className="flex-1 min-h-0 p-4 overflow-auto">
-        <div className="max-w-2xl mx-auto space-y-6">
-          {/* API Key Section */}
-          <div className="bg-[var(--geist-accents-1)] border border-[var(--geist-accents-2)] rounded-lg p-4">
-            <h2 className="text-base font-medium text-[var(--geist-foreground)] mb-4">
-              Anthropic API Key
-            </h2>
-            <p className="text-sm text-[var(--geist-accents-5)] mb-4">
-              Required for Smart Mode AI-powered epic generation. Your key is stored securely in your system's keychain.
-            </p>
-
-            {hasExistingKey ? (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 p-3 bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg">
-                  <span className="text-sm text-[var(--geist-success)] font-medium">API key configured</span>
-                  <span className="flex-1" />
-                  <button
-                    onClick={handleClear}
-                    disabled={saving}
-                    className="px-2 py-1 text-xs text-[var(--geist-error)] hover:bg-[var(--geist-error-light)] rounded transition-colors disabled:opacity-50"
-                  >
-                    Clear
-                  </button>
-                </div>
-                <p className="text-xs text-[var(--geist-accents-4)]">
-                  Enter a new key below to replace the existing one.
-                </p>
-              </div>
-            ) : (
-              <div className="p-3 bg-[var(--geist-warning-light)] border border-[var(--geist-warning)] rounded-lg mb-4">
-                <p className="text-sm text-[var(--geist-warning-dark)]">
-                  No API key configured. Smart Mode will not work without a valid key.
-                </p>
-              </div>
-            )}
-
-            <div className="space-y-2 mt-4">
-              <label
-                htmlFor="apiKey"
-                className="block text-sm font-medium text-[var(--geist-foreground)]"
-              >
-                {hasExistingKey ? "New API Key" : "API Key"}
-              </label>
-              <div className="relative">
-                <input
-                  id="apiKey"
-                  type={showKey ? "text" : "password"}
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  disabled={saving}
-                  placeholder="sk-ant-api03-..."
-                  className="w-full p-3 pr-20 text-sm bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)] disabled:opacity-50 font-mono"
-                  aria-label="Anthropic API key input"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowKey(!showKey)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs text-[var(--geist-accents-5)] hover:text-[var(--geist-foreground)] transition-colors"
-                >
-                  {showKey ? "Hide" : "Show"}
-                </button>
-              </div>
-              {apiKey && !showKey && (
-                <p className="text-xs text-[var(--geist-accents-4)] font-mono">
-                  {maskedKey}
-                </p>
-              )}
-            </div>
-          </div>
-
+        <div className="max-w-2xl mx-auto space-y-4">
           {/* Editor Settings */}
           <div className="bg-[var(--geist-accents-1)] border border-[var(--geist-accents-2)] rounded-lg p-4">
-            <h2 className="text-base font-medium text-[var(--geist-foreground)] mb-4">
-              Editor Settings
+            <h2 className="text-sm font-medium text-[var(--geist-foreground)] mb-3">
+              Editor
             </h2>
-
             <div className="flex items-center justify-between">
               <div>
-                <label htmlFor="vim-toggle" className="text-sm font-medium text-[var(--geist-foreground)] block mb-1">
+                <label htmlFor="vim-toggle" className="text-xs font-medium text-[var(--geist-foreground)] block mb-0.5">
                   Vim Mode
                 </label>
                 <p className="text-xs text-[var(--geist-accents-5)]">
-                  Enable vim keybindings in markdown editors
+                  Enable vim keybindings in editors
                 </p>
               </div>
               <Toggle
@@ -340,18 +205,18 @@ export function SettingsPage() {
           {/* .m2k Backup */}
           {projectPath && (
             <div className="bg-[var(--geist-accents-1)] border border-[var(--geist-accents-2)] rounded-lg p-4">
-              <h2 className="text-base font-medium text-[var(--geist-foreground)] mb-4">
-                .m2k Folder Backup
+              <h2 className="text-sm font-medium text-[var(--geist-foreground)] mb-3">
+                .m2k Backup
               </h2>
-              <p className="text-sm text-[var(--geist-accents-5)] mb-4">
-                Configure backup location for your .m2k folder. Useful when .m2k is gitignored.
+              <p className="text-xs text-[var(--geist-accents-5)] mb-3">
+                Configure backup location for your .m2k folder.
               </p>
 
               {hasBackupPath ? (
-                <div className="space-y-3">
-                  <div className="p-3 bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg">
-                    <div className="text-xs text-[var(--geist-accents-5)] mb-1">Backup Location</div>
-                    <div className="text-sm text-[var(--geist-foreground)] font-mono break-all">
+                <div className="space-y-2">
+                  <div className="p-2 bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded">
+                    <div className="text-[10px] text-[var(--geist-accents-5)] mb-0.5">Location</div>
+                    <div className="text-xs text-[var(--geist-foreground)] font-mono break-all">
                       {backupPath}
                     </div>
                   </div>
@@ -359,34 +224,27 @@ export function SettingsPage() {
                     <button
                       onClick={handleSyncBackup}
                       disabled={syncing || saving}
-                      className="flex-1 px-4 py-2 text-sm bg-[var(--geist-success)] text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                      className="flex-1 px-3 py-1.5 text-xs bg-[var(--monokai-green)] text-black rounded hover:opacity-90 transition-opacity disabled:opacity-50"
                     >
                       {syncing ? "Syncing..." : "Sync Now"}
                     </button>
                     <button
                       onClick={handleSelectBackupPath}
                       disabled={syncing || saving}
-                      className="px-4 py-2 text-sm border border-[var(--geist-accents-3)] rounded-lg hover:bg-[var(--geist-accents-1)] transition-colors disabled:opacity-50"
+                      className="px-3 py-1.5 text-xs text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors disabled:opacity-50"
                     >
                       Change
                     </button>
                   </div>
                 </div>
               ) : (
-                <div>
-                  <div className="p-3 bg-[var(--geist-warning-light)] border border-[var(--geist-warning)] rounded-lg mb-3">
-                    <p className="text-sm text-[var(--geist-warning-dark)]">
-                      No backup location configured.
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleSelectBackupPath}
-                    disabled={saving}
-                    className="w-full px-4 py-2 text-sm border border-[var(--geist-accents-3)] rounded-lg hover:bg-[var(--geist-accents-1)] transition-colors disabled:opacity-50"
-                  >
-                    Select Backup Location
-                  </button>
-                </div>
+                <button
+                  onClick={handleSelectBackupPath}
+                  disabled={saving}
+                  className="w-full px-3 py-1.5 text-xs text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] border border-[var(--geist-accents-3)] rounded transition-colors disabled:opacity-50"
+                >
+                  Select Backup Location
+                </button>
               )}
             </div>
           )}
@@ -394,44 +252,40 @@ export function SettingsPage() {
           {/* Project Counters */}
           {projectPath && projectSettings && (
             <div className="bg-[var(--geist-accents-1)] border border-[var(--geist-accents-2)] rounded-lg p-4">
-              <h2 className="text-base font-medium text-[var(--geist-foreground)] mb-4">
-                Project Counters & Stats
+              <h2 className="text-sm font-medium text-[var(--geist-foreground)] mb-3">
+                Project Stats
               </h2>
-              <p className="text-sm text-[var(--geist-accents-5)] mb-4">
-                Manage ID counters and view/sync project statistics.
-              </p>
 
               {/* Current Stats Display */}
-              <div className="mb-4 p-3 bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg">
-                <h3 className="text-sm font-medium text-[var(--geist-foreground)] mb-2">Current Stats</h3>
-                <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="mb-3 p-2 bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded">
+                <div className="grid grid-cols-2 gap-1.5 text-xs">
                   <div>
                     <span className="text-[var(--geist-accents-5)]">Epics:</span>{" "}
-                    <span className="text-[var(--geist-foreground)] font-medium">
+                    <span className="text-[var(--geist-foreground)]">
                       {projectSettings.completed_epics}/{projectSettings.total_epics}
                     </span>
                   </div>
                   <div>
                     <span className="text-[var(--geist-accents-5)]">Tickets:</span>{" "}
-                    <span className="text-[var(--geist-foreground)] font-medium">
+                    <span className="text-[var(--geist-foreground)]">
                       {projectSettings.total_tickets}
                     </span>
                   </div>
                   <div>
                     <span className="text-[var(--geist-accents-5)]">Backlog:</span>{" "}
-                    <span className="text-[var(--geist-foreground)] font-medium">
+                    <span className="text-[var(--geist-foreground)]">
                       {projectSettings.backlog_tickets}
                     </span>
                   </div>
                   <div>
                     <span className="text-[var(--geist-accents-5)]">In Progress:</span>{" "}
-                    <span className="text-[var(--geist-foreground)] font-medium">
+                    <span className="text-[var(--geist-foreground)]">
                       {projectSettings.inprogress_tickets}
                     </span>
                   </div>
                   <div>
                     <span className="text-[var(--geist-accents-5)]">Done:</span>{" "}
-                    <span className="text-[var(--geist-foreground)] font-medium">
+                    <span className="text-[var(--geist-foreground)]">
                       {projectSettings.done_tickets}
                     </span>
                   </div>
@@ -439,15 +293,15 @@ export function SettingsPage() {
                 <button
                   onClick={handleSyncStats}
                   disabled={saving}
-                  className="mt-3 w-full px-3 py-1.5 text-xs border border-[var(--geist-accents-3)] rounded-lg hover:bg-[var(--geist-accents-1)] transition-colors disabled:opacity-50"
+                  className="mt-2 w-full px-2 py-1 text-[10px] text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors disabled:opacity-50"
                 >
                   {saving ? "Syncing..." : "Sync Stats from Files"}
                 </button>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
-                  <label htmlFor="epic-counter" className="text-sm font-medium text-[var(--geist-foreground)] block mb-2">
+                  <label htmlFor="epic-counter" className="text-xs font-medium text-[var(--geist-foreground)] block mb-1">
                     Next Epic ID
                   </label>
                   <input
@@ -456,15 +310,15 @@ export function SettingsPage() {
                     min="0"
                     value={epicCounter}
                     onChange={(e) => setEpicCounter(parseInt(e.target.value) || 0)}
-                    className="w-full p-3 text-sm bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]"
+                    className="w-full px-2 py-1.5 text-xs bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded focus:outline-none focus:border-[var(--geist-accents-4)]"
                   />
-                  <p className="text-xs text-[var(--geist-accents-4)] mt-1">
-                    Next epic will be: EPIC-{String(epicCounter + 1).padStart(3, '0')}
+                  <p className="text-[10px] text-[var(--geist-accents-4)] mt-0.5">
+                    Next: EPIC-{String(epicCounter + 1).padStart(3, '0')}
                   </p>
                 </div>
 
                 <div>
-                  <label htmlFor="ticket-counter" className="text-sm font-medium text-[var(--geist-foreground)] block mb-2">
+                  <label htmlFor="ticket-counter" className="text-xs font-medium text-[var(--geist-foreground)] block mb-1">
                     Next Ticket ID
                   </label>
                   <input
@@ -473,17 +327,17 @@ export function SettingsPage() {
                     min="0"
                     value={ticketCounter}
                     onChange={(e) => setTicketCounter(parseInt(e.target.value) || 0)}
-                    className="w-full p-3 text-sm bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-1 focus:ring-offset-[var(--geist-background)]"
+                    className="w-full px-2 py-1.5 text-xs bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded focus:outline-none focus:border-[var(--geist-accents-4)]"
                   />
-                  <p className="text-xs text-[var(--geist-accents-4)] mt-1">
-                    Next ticket will be: T-{String(ticketCounter + 1).padStart(3, '0')}
+                  <p className="text-[10px] text-[var(--geist-accents-4)] mt-0.5">
+                    Next: T-{String(ticketCounter + 1).padStart(3, '0')}
                   </p>
                 </div>
 
                 <button
                   onClick={handleUpdateCounters}
                   disabled={saving}
-                  className="px-4 py-2 text-sm bg-[var(--geist-success)] text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                  className="px-3 py-1.5 text-xs bg-[var(--monokai-green)] text-black rounded hover:opacity-90 transition-opacity disabled:opacity-50"
                 >
                   {saving ? "Updating..." : "Update Counters"}
                 </button>
@@ -491,50 +345,9 @@ export function SettingsPage() {
             </div>
           )}
 
-          {/* Info Section */}
-          <div className="bg-[var(--geist-accents-1)] border border-[var(--geist-accents-2)] rounded-lg p-4">
-            <h3 className="text-sm font-medium text-[var(--geist-foreground)] mb-3">
-              How to get an API key
-            </h3>
-            <ol className="space-y-2 text-sm text-[var(--geist-accents-6)]">
-              <li className="flex items-start gap-2">
-                <span className="text-[var(--geist-accents-4)]">1.</span>
-                <span>Go to <span className="text-[var(--geist-foreground)]">console.anthropic.com</span></span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-[var(--geist-accents-4)]">2.</span>
-                <span>Sign in or create an account</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-[var(--geist-accents-4)]">3.</span>
-                <span>Navigate to <span className="text-[var(--geist-foreground)]">API Keys</span> section</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-[var(--geist-accents-4)]">4.</span>
-                <span>Create a new key and paste it here</span>
-              </li>
-            </ol>
-          </div>
-
-          {/* Security Note */}
-          <p className="text-xs text-[var(--geist-accents-4)] text-center">
-            Your API key is stored locally in your system's secure keychain and is never sent anywhere except Anthropic's servers.
-          </p>
-
           {/* App Version */}
-          <div className="bg-[var(--geist-accents-1)] border border-[var(--geist-accents-2)] rounded-lg p-4">
-            <h2 className="text-base font-medium text-[var(--geist-foreground)] mb-3">
-              App Version
-            </h2>
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-[var(--geist-accents-5)]">Current version:</span>
-              <span className="px-3 py-1 rounded-md bg-[var(--geist-background)] border border-[var(--geist-accents-3)] text-[var(--geist-foreground)] font-mono text-sm">
-                v{packageJson.version}
-              </span>
-            </div>
-            <p className="text-xs text-[var(--geist-accents-5)] mt-3">
-              Built with Claude Code
-            </p>
+          <div className="text-center text-[10px] text-[var(--geist-accents-4)] py-2">
+            M2K v{packageJson.version}
           </div>
         </div>
       </div>

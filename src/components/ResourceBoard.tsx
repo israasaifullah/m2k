@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { ChevronRight, ChevronDown, Folder, X, Plus, Edit2, Trash2, Save, Upload, Copy } from "lucide-react";
 import { useAppStore } from "../lib/store";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { Toast, useToast } from "./Toast";
+import { ResizeHandle } from "./ResizeHandle";
 
 interface FileNode {
   name: string;
@@ -44,7 +45,7 @@ function TreeItem({ node, level, selectedPath, expandedPaths, onToggleExpand, on
           e.preventDefault();
           onContextMenu(node, e);
         }}
-        className={`w-full px-1 py-0.5 text-xs flex items-center gap-1.5 hover:bg-[var(--geist-accents-2)] transition-colors ${
+        className={`w-full pr-3 py-0.5 text-xs flex items-center gap-1.5 hover:bg-[var(--geist-accents-2)] transition-colors ${
           isSelected ? "bg-[var(--geist-accents-2)] text-[var(--geist-foreground)]" : "text-[var(--geist-accents-4)]"
         }`}
         style={{ paddingLeft: `${level * 10 + 6}px` }}
@@ -53,7 +54,6 @@ function TreeItem({ node, level, selectedPath, expandedPaths, onToggleExpand, on
           <>
             {expanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
             <span className="flex-1 text-left truncate">{node.name}</span>
-            {node.children && <span className="text-[10px] opacity-50">{node.children.length}</span>}
           </>
         ) : (
           <>
@@ -125,8 +125,7 @@ function FilePreview({ path }: FilePreviewProps) {
       const fileContent = await invoke<string>("read_markdown_file", { path });
       setContent(fileContent);
       setEditContent(fileContent);
-      const isMarkdown = ['md', 'markdown'].includes(ext || '');
-      setEditing(isMarkdown);
+      setEditing(true);
     } catch (err) {
       setError(String(err));
       setContent(null);
@@ -164,7 +163,6 @@ function FilePreview({ path }: FilePreviewProps) {
 
   const ext = path.split('.').pop()?.toLowerCase();
   const isImage = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext || '');
-  const isMarkdown = ['md', 'markdown'].includes(ext || '');
 
   if (loading) {
     return (
@@ -197,12 +195,12 @@ function FilePreview({ path }: FilePreviewProps) {
     );
   }
 
-  if (isMarkdown && content !== null) {
+  if (content !== null) {
     return (
       <div className="h-full flex flex-col">
-        <div className="flex items-center justify-between p-3 border-b border-[var(--geist-accents-2)]">
-          <h3 className="text-sm font-medium truncate">{path.split('/').pop()}</h3>
-          <div className="flex gap-2">
+        <div className="flex items-center justify-between px-2 pt-1 pb-[2.5px] border-b border-[var(--geist-accents-2)] bg-[var(--geist-accents-1)]">
+          <span className="text-xs text-[var(--geist-accents-4)] truncate">{path.split('/').pop()}</span>
+          <div className="flex items-center">
             {editing ? (
               <>
                 <button
@@ -211,60 +209,41 @@ function FilePreview({ path }: FilePreviewProps) {
                     setEditContent(content);
                     setHasChanges(false);
                   }}
-                  className="px-3 py-1 text-sm border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)]"
+                  className="p-1.5 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors"
+                  title="Cancel"
                 >
-                  Cancel
+                  <X size={15} />
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={!hasChanges || saving}
-                  className="px-3 py-1 text-sm bg-[var(--geist-success)] text-white rounded-full hover:opacity-90 disabled:opacity-50 flex items-center gap-1"
+                  className="p-1.5 text-[var(--geist-accents-4)] hover:text-[var(--monokai-green)] transition-colors disabled:opacity-50"
+                  title={saving ? "Saving..." : "Save"}
                 >
-                  <Save size={14} />
-                  {saving ? "Saving..." : "Save"}
+                  <Save size={15} />
                 </button>
               </>
             ) : (
               <button
                 onClick={() => setEditing(true)}
-                className="px-3 py-1 text-sm border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)] flex items-center gap-1"
+                className="p-1.5 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors"
+                title="Edit"
               >
-                <Edit2 size={14} />
-                Edit
+                <Edit2 size={15} />
               </button>
             )}
           </div>
         </div>
         <div className="flex-1 min-h-0">
           {editing ? (
-            <div className="h-full p-3">
-              <MarkdownEditor value={editContent} onChange={handleEditorChange} />
+            <div className="h-full">
+              <MarkdownEditor value={editContent} onChange={handleEditorChange} filePath={path} />
             </div>
           ) : (
             <div className="h-full overflow-auto p-6">
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                <pre className="whitespace-pre-wrap text-sm">{content}</pre>
-              </div>
+              <pre className="text-sm whitespace-pre-wrap font-mono">{content}</pre>
             </div>
           )}
-        </div>
-      </div>
-    );
-  }
-
-  if (content) {
-    const ext = path.split('.').pop()?.toLowerCase();
-    const isYaml = ['yaml', 'yml'].includes(ext || '');
-
-    return (
-      <div className="h-full flex flex-col">
-        {isYaml && (
-          <div className="flex items-center justify-between p-3 border-b border-[var(--geist-accents-2)]">
-            <h3 className="text-sm font-medium truncate">{path.split('/').pop()}</h3>
-          </div>
-        )}
-        <div className="flex-1 min-h-0 overflow-auto p-6">
-          <pre className="text-sm whitespace-pre-wrap font-mono">{content}</pre>
         </div>
       </div>
     );
@@ -432,58 +411,67 @@ function NewFileDialog({ parentPath, onClose, onSuccess }: NewFileDialogProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={creating ? undefined : onClose}>
-      <div className="bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-lg font-semibold mb-4">New File</h2>
+      <div className="bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg w-80 mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--geist-accents-2)] bg-[var(--geist-accents-1)]">
+          <span className="text-xs text-[var(--geist-accents-4)]">New File</span>
+          <button
+            onClick={onClose}
+            disabled={creating}
+            className="p-1 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors disabled:opacity-50"
+          >
+            <X size={14} />
+          </button>
+        </div>
 
-        <div className="space-y-4 mb-6">
+        <div className="p-3 space-y-3">
           <div>
-            <label className="text-sm text-[var(--geist-accents-5)] mb-1 block">File name</label>
+            <label className="text-xs text-[var(--geist-accents-5)] mb-1 block">File name</label>
             <input
               type="text"
               value={fileName}
               onChange={(e) => setFileName(e.target.value)}
               placeholder="example.md"
-              className="w-full px-3 py-2 text-sm bg-[var(--geist-background)] border border-[var(--geist-accents-2)] rounded focus:outline-none focus:border-[var(--geist-accents-4)]"
+              className="w-full px-2 py-1.5 text-xs bg-[var(--geist-background)] border border-[var(--geist-accents-2)] rounded focus:outline-none focus:border-[var(--geist-accents-4)]"
               autoFocus
               onKeyDown={(e) => e.key === "Enter" && handleCreate()}
             />
           </div>
 
           <div>
-            <label className="text-sm text-[var(--geist-accents-5)] mb-1 block">Template</label>
+            <label className="text-xs text-[var(--geist-accents-5)] mb-1 block">Template</label>
             <select
               value={template}
               onChange={(e) => setTemplate(e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-[var(--geist-background)] border border-[var(--geist-accents-2)] rounded focus:outline-none focus:border-[var(--geist-accents-4)]"
+              className="w-full px-2 py-1.5 text-xs bg-[var(--geist-background)] border border-[var(--geist-accents-2)] rounded focus:outline-none focus:border-[var(--geist-accents-4)]"
             >
               <option value="markdown">Markdown</option>
               <option value="yaml">YAML</option>
               <option value="json">JSON</option>
             </select>
           </div>
-        </div>
 
-        {error && (
-          <div className="p-3 mb-4 bg-[var(--geist-error-light)] border border-[var(--geist-error)] rounded text-sm text-[var(--geist-error)]">
-            {error}
+          {error && (
+            <div className="p-2 bg-[var(--geist-error-light)] border border-[var(--geist-error)] rounded text-xs text-[var(--geist-error)]">
+              {error}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              onClick={onClose}
+              disabled={creating}
+              className="px-2 py-1 text-xs text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleCreate}
+              disabled={creating}
+              className="px-3 py-1 text-xs bg-[var(--monokai-green)] text-black rounded hover:opacity-90 disabled:opacity-50"
+            >
+              {creating ? "Creating..." : "Create"}
+            </button>
           </div>
-        )}
-
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            disabled={creating}
-            className="px-4 py-2 text-sm border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)] disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleCreate}
-            disabled={creating}
-            className="px-4 py-2 text-sm bg-[var(--geist-success)] text-white rounded-full hover:opacity-90 disabled:opacity-50"
-          >
-            {creating ? "Creating..." : "Create"}
-          </button>
         </div>
       </div>
     </div>
@@ -530,43 +518,54 @@ function NewFolderDialog({ parentPath, onClose, onSuccess }: NewFolderDialogProp
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={creating ? undefined : onClose}>
-      <div className="bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-lg font-semibold mb-4">New Folder</h2>
-
-        <div className="mb-6">
-          <label className="text-sm text-[var(--geist-accents-5)] mb-1 block">Folder name</label>
-          <input
-            type="text"
-            value={folderName}
-            onChange={(e) => setFolderName(e.target.value)}
-            placeholder="my-folder"
-            className="w-full px-3 py-2 text-sm bg-[var(--geist-background)] border border-[var(--geist-accents-2)] rounded focus:outline-none focus:border-[var(--geist-accents-4)]"
-            autoFocus
-            onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-          />
-        </div>
-
-        {error && (
-          <div className="p-3 mb-4 bg-[var(--geist-error-light)] border border-[var(--geist-error)] rounded text-sm text-[var(--geist-error)]">
-            {error}
-          </div>
-        )}
-
-        <div className="flex justify-end gap-3">
+      <div className="bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg w-80 mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--geist-accents-2)] bg-[var(--geist-accents-1)]">
+          <span className="text-xs text-[var(--geist-accents-4)]">New Folder</span>
           <button
             onClick={onClose}
             disabled={creating}
-            className="px-4 py-2 text-sm border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)] disabled:opacity-50"
+            className="p-1 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors disabled:opacity-50"
           >
-            Cancel
+            <X size={14} />
           </button>
-          <button
-            onClick={handleCreate}
-            disabled={creating}
-            className="px-4 py-2 text-sm bg-[var(--geist-success)] text-white rounded-full hover:opacity-90 disabled:opacity-50"
-          >
-            {creating ? "Creating..." : "Create"}
-          </button>
+        </div>
+
+        <div className="p-3 space-y-3">
+          <div>
+            <label className="text-xs text-[var(--geist-accents-5)] mb-1 block">Folder name</label>
+            <input
+              type="text"
+              value={folderName}
+              onChange={(e) => setFolderName(e.target.value)}
+              placeholder="my-folder"
+              className="w-full px-2 py-1.5 text-xs bg-[var(--geist-background)] border border-[var(--geist-accents-2)] rounded focus:outline-none focus:border-[var(--geist-accents-4)]"
+              autoFocus
+              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+            />
+          </div>
+
+          {error && (
+            <div className="p-2 bg-[var(--geist-error-light)] border border-[var(--geist-error)] rounded text-xs text-[var(--geist-error)]">
+              {error}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              onClick={onClose}
+              disabled={creating}
+              className="px-2 py-1 text-xs text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleCreate}
+              disabled={creating}
+              className="px-3 py-1 text-xs bg-[var(--monokai-green)] text-black rounded hover:opacity-90 disabled:opacity-50"
+            >
+              {creating ? "Creating..." : "Create"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -619,42 +618,53 @@ function RenameDialog({ node, onClose, onSuccess }: RenameDialogProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={renaming ? undefined : onClose}>
-      <div className="bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-lg font-semibold mb-4">Rename {node.isDirectory ? 'Folder' : 'File'}</h2>
-
-        <div className="mb-6">
-          <label className="text-sm text-[var(--geist-accents-5)] mb-1 block">New name</label>
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            className="w-full px-3 py-2 text-sm bg-[var(--geist-background)] border border-[var(--geist-accents-2)] rounded focus:outline-none focus:border-[var(--geist-accents-4)]"
-            autoFocus
-            onKeyDown={(e) => e.key === "Enter" && handleRename()}
-          />
-        </div>
-
-        {error && (
-          <div className="p-3 mb-4 bg-[var(--geist-error-light)] border border-[var(--geist-error)] rounded text-sm text-[var(--geist-error)]">
-            {error}
-          </div>
-        )}
-
-        <div className="flex justify-end gap-3">
+      <div className="bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg w-80 mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--geist-accents-2)] bg-[var(--geist-accents-1)]">
+          <span className="text-xs text-[var(--geist-accents-4)]">Rename {node.isDirectory ? 'Folder' : 'File'}</span>
           <button
             onClick={onClose}
             disabled={renaming}
-            className="px-4 py-2 text-sm border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)] disabled:opacity-50"
+            className="p-1 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors disabled:opacity-50"
           >
-            Cancel
+            <X size={14} />
           </button>
-          <button
-            onClick={handleRename}
-            disabled={renaming}
-            className="px-4 py-2 text-sm bg-[var(--geist-success)] text-white rounded-full hover:opacity-90 disabled:opacity-50"
-          >
-            {renaming ? "Renaming..." : "Rename"}
-          </button>
+        </div>
+
+        <div className="p-3 space-y-3">
+          <div>
+            <label className="text-xs text-[var(--geist-accents-5)] mb-1 block">New name</label>
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="w-full px-2 py-1.5 text-xs bg-[var(--geist-background)] border border-[var(--geist-accents-2)] rounded focus:outline-none focus:border-[var(--geist-accents-4)]"
+              autoFocus
+              onKeyDown={(e) => e.key === "Enter" && handleRename()}
+            />
+          </div>
+
+          {error && (
+            <div className="p-2 bg-[var(--geist-error-light)] border border-[var(--geist-error)] rounded text-xs text-[var(--geist-error)]">
+              {error}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              onClick={onClose}
+              disabled={renaming}
+              className="px-2 py-1 text-xs text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleRename}
+              disabled={renaming}
+              className="px-3 py-1 text-xs bg-[var(--monokai-green)] text-black rounded hover:opacity-90 disabled:opacity-50"
+            >
+              {renaming ? "Renaming..." : "Rename"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -714,18 +724,27 @@ function CopyToProjectDialog({ node, onClose, onSuccess }: CopyToProjectDialogPr
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={copying ? undefined : onClose}>
-      <div className="bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-lg font-semibold mb-4">Copy to Project</h2>
+      <div className="bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg w-80 mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--geist-accents-2)] bg-[var(--geist-accents-1)]">
+          <span className="text-xs text-[var(--geist-accents-4)]">Copy to Project</span>
+          <button
+            onClick={onClose}
+            disabled={copying}
+            className="p-1 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors disabled:opacity-50"
+          >
+            <X size={14} />
+          </button>
+        </div>
 
-        <p className="text-sm text-[var(--geist-accents-5)] mb-2">
-          Copy <strong className="text-[var(--geist-foreground)]">{node.name}</strong> to:
-        </p>
+        <div className="p-3 space-y-3">
+          <p className="text-xs text-[var(--geist-accents-5)]">
+            Copy <strong className="text-[var(--geist-foreground)]">{node.name}</strong> to:
+          </p>
 
-        <div className="mb-6">
           <select
             value={selectedProjectId || ""}
             onChange={(e) => setSelectedProjectId(Number(e.target.value))}
-            className="w-full px-3 py-2 text-sm bg-[var(--geist-background)] border border-[var(--geist-accents-2)] rounded focus:outline-none focus:border-[var(--geist-accents-4)]"
+            className="w-full px-2 py-1.5 text-xs bg-[var(--geist-background)] border border-[var(--geist-accents-2)] rounded focus:outline-none focus:border-[var(--geist-accents-4)]"
           >
             <option value="">Select a project...</option>
             {availableProjects.map(project => (
@@ -734,35 +753,35 @@ function CopyToProjectDialog({ node, onClose, onSuccess }: CopyToProjectDialogPr
               </option>
             ))}
           </select>
-        </div>
 
-        {availableProjects.length === 0 && (
-          <p className="text-sm text-[var(--geist-accents-5)] mb-4">
-            No other projects available
-          </p>
-        )}
+          {availableProjects.length === 0 && (
+            <p className="text-xs text-[var(--geist-accents-5)]">
+              No other projects available
+            </p>
+          )}
 
-        {error && (
-          <div className="p-3 mb-4 bg-[var(--geist-error-light)] border border-[var(--geist-error)] rounded text-sm text-[var(--geist-error)]">
-            {error}
+          {error && (
+            <div className="p-2 bg-[var(--geist-error-light)] border border-[var(--geist-error)] rounded text-xs text-[var(--geist-error)]">
+              {error}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              onClick={onClose}
+              disabled={copying}
+              className="px-2 py-1 text-xs text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleCopy}
+              disabled={copying || !selectedProjectId}
+              className="px-3 py-1 text-xs bg-[var(--monokai-green)] text-black rounded hover:opacity-90 disabled:opacity-50"
+            >
+              {copying ? "Copying..." : "Copy"}
+            </button>
           </div>
-        )}
-
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            disabled={copying}
-            className="px-4 py-2 text-sm border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)] disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleCopy}
-            disabled={copying || !selectedProjectId}
-            className="px-4 py-2 text-sm bg-[var(--geist-success)] text-white rounded-full hover:opacity-90 disabled:opacity-50"
-          >
-            {copying ? "Copying..." : "Copy"}
-          </button>
         </div>
       </div>
     </div>
@@ -806,40 +825,51 @@ function DeleteDialog({ node, onClose, onSuccess }: DeleteDialogProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={deleting ? undefined : onClose}>
-      <div className="bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-lg font-semibold mb-4">Delete {node.isDirectory ? 'Folder' : 'File'}?</h2>
-
-        <p className="text-sm text-[var(--geist-accents-5)] mb-2">
-          Are you sure you want to delete <strong className="text-[var(--geist-foreground)]">{node.name}</strong>?
-        </p>
-
-        {node.isDirectory && (
-          <p className="text-sm text-[var(--geist-error)] mb-4">
-            This will permanently delete the folder and all its contents.
-          </p>
-        )}
-
-        {error && (
-          <div className="p-3 mb-4 bg-[var(--geist-error-light)] border border-[var(--geist-error)] rounded text-sm text-[var(--geist-error)]">
-            {error}
-          </div>
-        )}
-
-        <div className="flex justify-end gap-3">
+      <div className="bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-lg w-80 mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--geist-accents-2)] bg-[var(--geist-accents-1)]">
+          <span className="text-xs text-[var(--geist-accents-4)]">Delete {node.isDirectory ? 'Folder' : 'File'}</span>
           <button
             onClick={onClose}
             disabled={deleting}
-            className="px-4 py-2 text-sm border border-[var(--geist-accents-3)] rounded-full hover:bg-[var(--geist-accents-1)] disabled:opacity-50"
+            className="p-1 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors disabled:opacity-50"
           >
-            Cancel
+            <X size={14} />
           </button>
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            className="px-4 py-2 text-sm bg-[var(--geist-error)] text-white rounded-full hover:opacity-90 disabled:opacity-50"
-          >
-            {deleting ? "Deleting..." : "Delete"}
-          </button>
+        </div>
+
+        <div className="p-3 space-y-3">
+          <p className="text-xs text-[var(--geist-accents-5)]">
+            Delete <strong className="text-[var(--geist-foreground)]">{node.name}</strong>?
+          </p>
+
+          {node.isDirectory && (
+            <p className="text-xs text-[var(--monokai-red)]">
+              This will permanently delete the folder and all its contents.
+            </p>
+          )}
+
+          {error && (
+            <div className="p-2 bg-[var(--geist-error-light)] border border-[var(--geist-error)] rounded text-xs text-[var(--geist-error)]">
+              {error}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-1">
+            <button
+              onClick={onClose}
+              disabled={deleting}
+              className="px-2 py-1 text-xs text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="px-3 py-1 text-xs bg-[var(--monokai-red)] text-white rounded hover:opacity-90 disabled:opacity-50"
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -848,7 +878,13 @@ function DeleteDialog({ node, onClose, onSuccess }: DeleteDialogProps) {
 
 export function ResourceBoard() {
   const projectPath = useAppStore((s) => s.projectPath);
+  const resourcePanelWidth = useAppStore((s) => s.resourcePanelWidth);
+  const setResourcePanelWidth = useAppStore((s) => s.setResourcePanelWidth);
   const [tree, setTree] = useState<FileNode | null>(null);
+
+  const handleResize = useCallback((delta: number) => {
+    setResourcePanelWidth(Math.max(150, Math.min(500, resourcePanelWidth + delta)));
+  }, [resourcePanelWidth, setResourcePanelWidth]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [selectedIsDirectory, setSelectedIsDirectory] = useState(false);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
@@ -861,7 +897,7 @@ export function ResourceBoard() {
   const [deleteNode, setDeleteNode] = useState<FileNode | null>(null);
   const [copyToProjectNode, setCopyToProjectNode] = useState<FileNode | null>(null);
   const [contextMenu, setContextMenu] = useState<{ node: FileNode; x: number; y: number } | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [_uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string[]>([]);
   const { toast, showToast, hideToast } = useToast();
 
@@ -1051,8 +1087,8 @@ export function ResourceBoard() {
 
   return (
     <div className="h-full flex">
-      <div className="w-52 border-r border-[var(--geist-accents-2)] flex flex-col bg-[var(--geist-accents-1)]">
-        <div className="flex items-center justify-between px-2 py-1 border-b border-[var(--geist-accents-2)]">
+      <div className="flex flex-col bg-[var(--geist-accents-1)] flex-shrink-0" style={{ width: resourcePanelWidth }}>
+        <div className="flex items-center justify-between pl-2 pr-3 py-1 border-b border-[var(--geist-accents-2)]">
           <div className="flex items-center gap-1 flex-1">
             <input
               type="text"
@@ -1070,26 +1106,16 @@ export function ResourceBoard() {
               </button>
             )}
           </div>
-          <div className="flex items-center">
-            <button
+          <button
               onClick={() => {
                 setNewFileParentPath(resourcePath);
                 setShowNewFileDialog(true);
               }}
-              className="p-1.5 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors"
+              className="p-1.5 mr-1 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors"
               title="New file"
             >
               <Plus size={14} />
             </button>
-            <button
-              onClick={() => handleFilePickerClick()}
-              disabled={uploading}
-              className="p-1.5 text-[var(--geist-accents-4)] hover:text-[var(--monokai-green)] transition-colors disabled:opacity-50"
-              title={uploading ? "Uploading..." : "Upload files"}
-            >
-              <Upload size={14} />
-            </button>
-          </div>
         </div>
         {uploadProgress.length > 0 && (
           <div className="px-2 py-1 border-b border-[var(--geist-accents-2)] text-[10px] space-y-0.5">
@@ -1129,6 +1155,7 @@ export function ResourceBoard() {
           )}
         </div>
       </div>
+      <ResizeHandle onResize={handleResize} />
       <div className="flex-1 overflow-auto bg-[var(--geist-background)]">
         {selectedPath && !selectedIsDirectory ? (
           <FilePreview path={selectedPath} />

@@ -8,6 +8,42 @@ interface Props {
   value: string;
   onChange: (value: string) => void;
   readOnly?: boolean;
+  filePath?: string;
+}
+
+// Map file extensions to Monaco languages
+function getLanguageFromPath(filePath?: string): string {
+  if (!filePath) return "markdown";
+  const ext = filePath.split('.').pop()?.toLowerCase();
+  const languageMap: Record<string, string> = {
+    md: "markdown",
+    markdown: "markdown",
+    js: "javascript",
+    jsx: "javascript",
+    ts: "typescript",
+    tsx: "typescript",
+    json: "json",
+    yaml: "yaml",
+    yml: "yaml",
+    sql: "sql",
+    py: "python",
+    rs: "rust",
+    go: "go",
+    java: "java",
+    c: "c",
+    cpp: "cpp",
+    h: "c",
+    hpp: "cpp",
+    css: "css",
+    scss: "scss",
+    html: "html",
+    xml: "xml",
+    sh: "shell",
+    bash: "shell",
+    zsh: "shell",
+    txt: "plaintext",
+  };
+  return languageMap[ext || ''] || "plaintext";
 }
 
 export interface MarkdownEditorHandle {
@@ -21,7 +57,7 @@ const defineMonokaiTheme = (monaco: typeof import("monaco-editor")) => {
     base: "vs-dark",
     inherit: true,
     rules: [
-      { token: "comment", foreground: "75715E", fontStyle: "italic" },
+      { token: "comment", foreground: "909090", fontStyle: "italic" },
       { token: "keyword", foreground: "F92672" },
       { token: "string", foreground: "E6DB74" },
       { token: "number", foreground: "AE81FF" },
@@ -58,7 +94,8 @@ loader.init().then((monaco) => {
 });
 
 export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
-  function MarkdownEditor({ value, onChange, readOnly = false }, ref) {
+  function MarkdownEditor({ value, onChange, readOnly = false, filePath }, ref) {
+    const language = getLanguageFromPath(filePath);
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
     const vimModeRef = useRef<VimMode | null>(null);
     const statusBarRef = useRef<HTMLDivElement | null>(null);
@@ -119,6 +156,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
   useEffect(() => {
     if (!editorReady || !editorRef.current || !statusBarRef.current) return;
 
+    let observer: MutationObserver | null = null;
+
     if (vimEnabled && !readOnly) {
       const vimMode = initVimMode(editorRef.current, statusBarRef.current);
       vimModeRef.current = vimMode;
@@ -131,12 +170,31 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
           editorRef.current?.trigger('vim', 'vim-save', {});
         });
       }
+
+      // Clean up mode text (remove dashes)
+      const cleanModeText = () => {
+        if (statusBarRef.current) {
+          const text = statusBarRef.current.textContent || "";
+          if (text.includes("--")) {
+            statusBarRef.current.childNodes.forEach((node) => {
+              if (node.nodeType === Node.TEXT_NODE && node.textContent) {
+                node.textContent = node.textContent.replace(/--\s*/g, "").replace(/\s*--/g, "");
+              }
+            });
+          }
+        }
+      };
+
+      observer = new MutationObserver(cleanModeText);
+      observer.observe(statusBarRef.current, { childList: true, subtree: true, characterData: true });
+      cleanModeText();
     } else if (vimModeRef.current) {
       vimModeRef.current.dispose();
       vimModeRef.current = null;
     }
 
     return () => {
+      observer?.disconnect();
       if (vimModeRef.current) {
         vimModeRef.current.dispose();
         vimModeRef.current = null;
@@ -159,7 +217,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         <div className="flex-1 min-h-0">
           <Editor
             height="100%"
-            defaultLanguage="markdown"
+            language={language}
             theme="monokai"
             value={value}
             onChange={handleChange}
@@ -167,7 +225,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
             options={{
               readOnly,
               fontSize: 14,
-              fontFamily: '"Geist Mono", monospace',
+              fontFamily: '"Fira Code", monospace',
               lineHeight: 1.6,
               minimap: { enabled: false },
               scrollBeyondLastLine: false,
@@ -193,7 +251,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
         {!readOnly && (
           <div
             ref={statusBarRef}
-            className={`h-6 px-3 flex items-center bg-[var(--geist-accents-1)] border-t border-[var(--geist-accents-2)] text-xs font-mono text-[var(--geist-accents-5)] ${vimEnabled ? '' : 'hidden'}`}
+            className={`h-5 px-2 flex items-center gap-2 bg-[var(--geist-background)] border-t border-[var(--geist-accents-2)] text-[11px] font-mono font-bold text-[var(--monokai-green)] ${vimEnabled ? '' : 'hidden'}`}
             aria-label="Vim status bar"
           />
         )}

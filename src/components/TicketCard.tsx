@@ -201,15 +201,15 @@ export function TicketCard({ ticket }: Props) {
             aria-label={`Edit ${ticket.id}`}
             title="Edit"
           >
-            <Pencil size={14} />
+            <Pencil size={15} />
           </button>
           <button
             onClick={handleDelete}
-            className="p-1 text-[var(--geist-accents-4)] hover:text-[var(--monokai-red)] transition-colors"
+            className="p-1 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors"
             aria-label={`Delete ${ticket.id}`}
             title="Delete"
           >
-            <X size={14} />
+            <X size={15} />
           </button>
         </div>
       </div>

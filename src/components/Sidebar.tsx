@@ -2,7 +2,8 @@ import { Settings, Plus, LayoutGrid, ChevronDown, ChevronRight, Folder, AlertTri
 import { useAppStore, RegisteredProject } from "../lib/store";
 import { useProjectLoader } from "../hooks/useProjectLoader";
 import { ProjectContextMenu } from "./ProjectContextMenu";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { ResizeHandle } from "./ResizeHandle";
 
 interface ContextMenuState {
   project: RegisteredProject;
@@ -19,6 +20,12 @@ export function Sidebar() {
   const setSidebarCollapsed = useAppStore((s) => s.setSidebarCollapsed);
   const triggerSave = useAppStore((s) => s.triggerSave);
   const setSelectedEpic = useAppStore((s) => s.setSelectedEpic);
+  const sidebarWidth = useAppStore((s) => s.sidebarWidth);
+  const setSidebarWidth = useAppStore((s) => s.setSidebarWidth);
+
+  const handleResize = useCallback((delta: number) => {
+    setSidebarWidth(Math.max(120, Math.min(400, sidebarWidth + delta)));
+  }, [sidebarWidth, setSidebarWidth]);
   const { selectFolder, switchToProject, removeProject, renameProject, validateProjectPath } = useProjectLoader();
   const [projectsExpanded, setProjectsExpanded] = useState(true);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -109,9 +116,8 @@ export function Sidebar() {
   return (
     <>
     <aside
-      className={`border-r border-[var(--geist-accents-2)] flex flex-col bg-[var(--geist-accents-1)] transition-all duration-200 overflow-hidden ${
-        sidebarCollapsed ? 'w-10' : 'w-44'
-      }`}
+      className="flex flex-col bg-[var(--geist-accents-1)] overflow-hidden flex-shrink-0"
+      style={{ width: sidebarCollapsed ? 40 : sidebarWidth }}
     >
       {/* Logo / Collapse Toggle */}
       <div className={`py-1.5 border-b border-[var(--geist-accents-2)] flex items-center ${
@@ -136,10 +142,10 @@ export function Sidebar() {
       </div>
 
       {/* Main Actions */}
-      <nav className={`py-1 ${sidebarCollapsed ? 'px-1' : 'px-1'}`}>
+      <nav>
         <button
           onClick={handleBoard}
-          className={`w-full rounded flex items-center gap-2 transition-colors ${
+          className={`w-full flex items-center gap-2 transition-colors ${
             sidebarCollapsed ? 'p-1.5 justify-center' : 'px-2 py-1'
           } ${
             viewMode === "kanban"
@@ -155,7 +161,7 @@ export function Sidebar() {
 
         <button
           onClick={handleResources}
-          className={`w-full rounded flex items-center gap-2 transition-colors ${
+          className={`w-full flex items-center gap-2 transition-colors ${
             sidebarCollapsed ? 'p-1.5 justify-center' : 'px-2 py-1'
           } ${
             viewMode === "resources"
@@ -171,7 +177,7 @@ export function Sidebar() {
 
         <button
           onClick={handleCreateNew}
-          className={`w-full rounded flex items-center gap-2 transition-colors ${
+          className={`w-full flex items-center gap-2 transition-colors ${
             sidebarCollapsed ? 'p-1.5 justify-center' : 'px-2 py-1'
           } ${
             viewMode === "prd"
@@ -193,11 +199,11 @@ export function Sidebar() {
           className="px-2 py-1 flex items-center justify-between text-[10px] font-medium text-[var(--geist-accents-4)] uppercase tracking-wider hover:bg-[var(--geist-accents-1)] transition-colors"
         >
           <span>Projects</span>
-          {projectsExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          {projectsExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </button>
 
         {projectsExpanded && (
-          <div className="flex-1 overflow-y-auto px-1 pb-1">
+          <div className="flex-1 overflow-y-auto pb-1">
             {registeredProjects.length === 0 ? (
               <p className="px-2 py-1 text-xs text-[var(--geist-accents-4)]">No projects</p>
             ) : (
@@ -209,11 +215,11 @@ export function Sidebar() {
                       key={project.id}
                       onClick={() => handleProjectClick(project)}
                       onContextMenu={(e) => handleProjectContextMenu(e, project)}
-                      className={`w-full px-2 py-1 text-xs rounded flex items-center gap-1.5 transition-colors text-left ${
+                      className={`w-full px-2 py-1 text-xs flex items-center gap-1.5 transition-colors text-left ${
                         isMissing
                           ? "text-[var(--monokai-red)] opacity-70"
                           : project.id === activeProjectId
-                          ? "bg-[var(--geist-accents-2)] text-[var(--monokai-green)]"
+                          ? "bg-[var(--geist-accents-2)] text-[var(--geist-foreground)]"
                           : "hover:bg-[var(--geist-accents-1)] text-[var(--geist-accents-4)]"
                       }`}
                       title={isMissing ? `Missing: ${project.path}` : project.path}
@@ -232,7 +238,7 @@ export function Sidebar() {
 
             <button
               onClick={selectFolder}
-              className="w-full mt-1 px-2 py-1 text-xs rounded flex items-center gap-1.5 hover:bg-[var(--geist-accents-1)] text-[var(--geist-accents-4)] transition-colors"
+              className="w-full mt-1 px-2 py-1 text-xs flex items-center gap-1.5 hover:bg-[var(--geist-accents-1)] text-[var(--geist-accents-4)] transition-colors"
               aria-label="Add project"
             >
               <Plus size={12} />
@@ -243,10 +249,10 @@ export function Sidebar() {
       </div>
 
       {/* Settings at bottom */}
-      <div className={`py-1 border-t border-[var(--geist-accents-2)] ${sidebarCollapsed ? 'px-1' : 'px-1'}`}>
+      <div className="border-t border-[var(--geist-accents-2)]">
         <button
           onClick={handleSettings}
-          className={`w-full rounded flex items-center gap-2 transition-colors ${
+          className={`w-full flex items-center gap-2 transition-colors ${
             sidebarCollapsed ? 'p-1.5 justify-center' : 'px-2 py-1'
           } ${
             viewMode === "settings"
@@ -262,6 +268,7 @@ export function Sidebar() {
       </div>
 
     </aside>
+    {!sidebarCollapsed && <ResizeHandle onResize={handleResize} />}
     {/* Context Menu - rendered outside aside for proper z-index */}
     {contextMenu && (
       <ProjectContextMenu

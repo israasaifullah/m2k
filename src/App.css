@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  font-family: "Geist Sans", system-ui, sans-serif;
+  font-family: "Fira Code", monospace;
   /* Monokai color scheme */
   --geist-background: #272822;
   --geist-foreground: #F8F8F2;
@@ -31,7 +31,7 @@ body {
 }
 
 code, pre, .font-mono {
-  font-family: "Geist Mono", monospace;
+  font-family: "Fira Code", monospace;
 }
 
 @keyframes pulse-subtle {
@@ -129,4 +129,28 @@ code, pre, .font-mono {
   * {
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Vim status bar styling */
+[aria-label="Vim status bar"] {
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+[aria-label="Vim status bar"] input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--geist-foreground);
+  font-family: "Fira Code", monospace;
+  font-size: 11px;
+}
+
+[aria-label="Vim status bar"] .cm-vim-message {
+  color: var(--monokai-yellow);
+}
+
+/* Style the mode indicator */
+[aria-label="Vim status bar"]::before {
+  content: "";
 }

@@ -1,6 +1,6 @@
 import { useMemo, useEffect } from "react";
 import { useAppStore } from "../lib/store";
-import { Select } from "./Select";
+import { SearchableSelect } from "./SearchableSelect";
 
 export function EpicFilter() {
   const epics = useAppStore((s) => s.epics);
@@ -24,7 +24,7 @@ export function EpicFilter() {
   }, [selectedEpic, sortedEpics, setSelectedEpic]);
 
   return (
-    <Select
+    <SearchableSelect
       value={selectedEpic || ""}
       onChange={(value) => setSelectedEpic(value || null)}
       options={sortedEpics.map((epic) => ({
@@ -32,8 +32,6 @@ export function EpicFilter() {
         label: `${epic.id}: ${epic.title}`,
       }))}
       placeholder="Epic"
-      variant="minimal"
-      showChevron={true}
       aria-label="Filter tickets by epic"
     />
   );

@@ -132,14 +132,14 @@ export function EpicGrid() {
                       className="p-1 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors"
                       title="Edit"
                     >
-                      <Pencil size={12} />
+                      <Pencil size={15} />
                     </button>
                     <button
                       onClick={(e) => handleDelete(e, epic)}
-                      className="p-1 text-[var(--geist-accents-4)] hover:text-[var(--monokai-red)] transition-colors"
+                      className="p-1 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors"
                       title="Delete"
                     >
-                      <X size={12} />
+                      <X size={15} />
                     </button>
                   </div>
                 </div>
