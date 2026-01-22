@@ -13,7 +13,7 @@ interface SelectProps {
   className?: string;
   showChevron?: boolean;
   disabled?: boolean;
-  variant?: "default" | "pill";
+  variant?: "default" | "pill" | "minimal";
   "aria-label"?: string;
 }
 
@@ -30,6 +30,8 @@ export function Select({
 }: SelectProps) {
   const baseClassName = variant === "pill"
     ? "px-3 py-1 text-xs bg-gradient-to-r from-[var(--geist-accents-2)] to-[var(--geist-accents-1)] border border-[var(--geist-accents-3)] rounded-full text-[var(--geist-foreground)] hover:scale-[1.02] focus:outline-none focus:border-[var(--geist-success)] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+    : variant === "minimal"
+    ? "px-1 py-1 text-xs bg-transparent text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] focus:outline-none transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
     : "px-3 py-1.5 text-sm bg-[var(--geist-background)] border border-[var(--geist-accents-3)] rounded-md text-[var(--geist-foreground)] hover:bg-[var(--geist-accents-1)] focus:outline-none focus:border-[var(--geist-success)] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
 
   const selectClassName = showChevron
