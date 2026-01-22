@@ -27,13 +27,8 @@ export function EpicGrid() {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
-          <BookOpen size={48} className="mx-auto mb-4 text-[var(--geist-accents-4)]" />
-          <h2 className="text-lg font-medium text-[var(--geist-foreground)] mb-2">
-            No Epics Found
-          </h2>
-          <p className="text-sm text-[var(--geist-accents-5)]">
-            Create an epic to get started
-          </p>
+          <BookOpen size={32} className="mx-auto mb-2 text-[var(--geist-accents-4)]" />
+          <p className="text-xs text-[var(--geist-accents-4)]">No epics found</p>
         </div>
       </div>
     );
@@ -41,17 +36,8 @@ export function EpicGrid() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-6 py-4 border-b border-[var(--geist-accents-2)]">
-        <h1 className="text-xl font-semibold text-[var(--geist-foreground)]">
-          Select an Epic
-        </h1>
-        <p className="text-sm text-[var(--geist-accents-5)] mt-1">
-          Choose an epic to view its kanban board
-        </p>
-      </div>
-
-      <div className="flex-1 overflow-auto p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-7xl mx-auto">
+      <div className="flex-1 overflow-auto p-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
           {sortedEpics.map((epic) => {
             const stats = getEpicStats(epic.id);
             const progress = stats.total > 0 ? (stats.completed / stats.total) * 100 : 0;
@@ -61,43 +47,25 @@ export function EpicGrid() {
               <button
                 key={epic.id}
                 onClick={() => handleEpicClick(epic.id)}
-                className="group relative bg-[var(--geist-accents-1)] hover:bg-[var(--geist-accents-2)] border border-[var(--geist-accents-3)] hover:border-[var(--geist-accents-4)] rounded-lg p-5 text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--geist-success)] focus:ring-offset-2 focus:ring-offset-[var(--geist-background)]"
+                className="group text-left p-2 rounded hover:bg-[var(--geist-accents-1)] transition-colors focus:outline-none"
               >
-                <div className="flex items-start gap-3 mb-3">
+                <div className="flex items-center gap-2 mb-1">
                   {isComplete ? (
-                    <CheckCircle2 size={20} className="text-[var(--geist-success)] flex-shrink-0 mt-0.5" />
+                    <CheckCircle2 size={14} className="text-[var(--monokai-green)] flex-shrink-0" />
                   ) : (
-                    <Circle size={20} className="text-[var(--geist-accents-5)] flex-shrink-0 mt-0.5" />
+                    <Circle size={14} className="text-[var(--geist-accents-4)] flex-shrink-0" />
                   )}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-[var(--geist-foreground)] group-hover:text-[var(--ds-pink-500)] transition-colors line-clamp-2">
-                      {epic.title}
-                    </h3>
-                    <p className="text-xs text-[var(--geist-accents-5)] mt-1 font-mono">
-                      {epic.id}
-                    </p>
-                  </div>
+                  <span className="text-[10px] text-[var(--geist-accents-4)] font-mono">{epic.id}</span>
+                  <span className="text-[10px] text-[var(--geist-accents-4)] ml-auto">{stats.completed}/{stats.total}</span>
                 </div>
-
-                {epic.scope && (
-                  <p className="text-sm text-[var(--geist-accents-6)] mb-4 line-clamp-2">
-                    {epic.scope}
-                  </p>
-                )}
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-[var(--geist-accents-5)]">Progress</span>
-                    <span className="text-[var(--geist-foreground)] font-medium">
-                      {stats.completed}/{stats.total} tickets
-                    </span>
-                  </div>
-                  <div className="h-1.5 bg-[var(--geist-accents-2)] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-[var(--geist-success)] transition-all duration-300"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
+                <h3 className="text-xs text-[var(--geist-foreground)] line-clamp-1 mb-1">
+                  {epic.title}
+                </h3>
+                <div className="h-0.5 bg-[var(--geist-accents-2)] rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-[var(--monokai-green)] transition-all duration-300"
+                    style={{ width: `${progress}%` }}
+                  />
                 </div>
               </button>
             );
