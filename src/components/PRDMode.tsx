@@ -65,11 +65,7 @@ function ResourcePickerModal({ onClose, onSelect }: ResourcePickerModalProps) {
     const isImage = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext || '');
     const isMarkdown = ['md', 'markdown'].includes(ext || '');
 
-    // Extract relative path
-    const pathParts = node.path.split('/resources/');
-    const relativePath = pathParts.length > 1 ? `resources/${pathParts[1]}` : node.path;
-
-    onSelect(relativePath, isImage, isMarkdown);
+    onSelect(node.path, isImage, isMarkdown);
   };
 
   const renderNode = (node: FileNode, level: number = 0): React.ReactElement[] => {
@@ -269,22 +265,10 @@ export function PRDMode() {
     setError(null);
   };
 
-  const handleResourceSelect = (path: string, isImage: boolean, isMarkdown: boolean) => {
-    let linkText = "";
-
-    if (isImage) {
-      const altText = path.split('/').pop()?.replace(/\.[^/.]+$/, '') || 'image';
-      linkText = `![${altText}](${path})`;
-    } else if (isMarkdown) {
-      const filename = path.split('/').pop()?.replace(/\.md$/, '') || 'file';
-      linkText = `[[${filename}]]`;
-    } else {
-      linkText = path;
-    }
-
-    editorRef.current?.insertText(linkText);
+  const handleResourceSelect = (path: string, _isImage: boolean, _isMarkdown: boolean) => {
+    editorRef.current?.insertText(path);
     setShowResourcePicker(false);
-    showToast("Resource link inserted", "success");
+    showToast("Resource path inserted", "success");
   };
 
   const handleCancel = () => {

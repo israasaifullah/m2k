@@ -6,6 +6,9 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { Toast, useToast } from "./Toast";
 import { ResizeHandle } from "./ResizeHandle";
+import { SwaggerPreview } from "./SwaggerPreview";
+import { ExcalidrawPreview } from "./ExcalidrawPreview";
+import { isOpenAPIExtension, parseOpenAPIContent, type OpenAPISpec } from "../lib/openapi";
 
 interface FileNode {
   name: string;
@@ -90,6 +93,7 @@ function FilePreview({ path }: FilePreviewProps) {
   const setSaveCallback = useAppStore((s) => s.setSaveCallback);
   const [content, setContent] = useState<string | null>(null);
   const [imageData, setImageData] = useState<string | null>(null);
+  const [openAPISpec, setOpenAPISpec] = useState<OpenAPISpec | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -102,11 +106,15 @@ function FilePreview({ path }: FilePreviewProps) {
     setHasChanges(false);
   }, [path]);
 
+  const isExcalidrawFile = path.endsWith('.excalidraw');
+
   const loadFile = async () => {
     setLoading(true);
     setError(null);
+    setOpenAPISpec(null);
     const ext = path.split('.').pop()?.toLowerCase();
     const isImage = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext || '');
+    const isInApiContracts = path.includes('/api-contracts/');
 
     if (isImage) {
       try {
@@ -123,9 +131,22 @@ function FilePreview({ path }: FilePreviewProps) {
 
     try {
       const fileContent = await invoke<string>("read_markdown_file", { path });
+
+      if (isInApiContracts && isOpenAPIExtension(path)) {
+        const spec = parseOpenAPIContent(fileContent, path);
+        if (spec) {
+          setOpenAPISpec(spec);
+          setContent(fileContent);
+          setLoading(false);
+          return;
+        }
+      }
+
       setContent(fileContent);
       setEditContent(fileContent);
-      setEditing(true);
+      if (!isExcalidrawFile) {
+        setEditing(true);
+      }
     } catch (err) {
       setError(String(err));
       setContent(null);
@@ -192,6 +213,23 @@ function FilePreview({ path }: FilePreviewProps) {
           className="max-w-full max-h-full object-contain"
         />
       </div>
+    );
+  }
+
+  if (openAPISpec) {
+    return <SwaggerPreview spec={openAPISpec} fileName={path.split('/').pop() || 'API Spec'} />;
+  }
+
+  if (isExcalidrawFile && content !== null) {
+    const handleExcalidrawSave = async (data: string) => {
+      await invoke("save_markdown_file", { path, content: data });
+    };
+    return (
+      <ExcalidrawPreview
+        initialContent={content}
+        fileName={path.split('/').pop() || 'Drawing'}
+        onSave={handleExcalidrawSave}
+      />
     );
   }
 
@@ -334,7 +372,7 @@ function ContextMenu({ node, x, y, onClose, onRename, onDelete, onCopyPath, onUp
         className="w-full px-4 py-2 text-sm text-left hover:bg-[var(--geist-accents-1)] flex items-center gap-2"
       >
         <Copy size={14} />
-        Copy Relative Path
+        Copy Full Path
       </button>
       {onCopyToProject && (
         <button
@@ -385,6 +423,14 @@ function NewFileDialog({ parentPath, onClose, onSuccess }: NewFileDialogProps) {
     markdown: "# New Document\n\n",
     yaml: "# YAML Configuration\n\n",
     json: "{\n  \n}\n",
+    drawing: JSON.stringify({
+      type: "excalidraw",
+      version: 2,
+      source: "https://excalidraw.com",
+      elements: [],
+      appState: {},
+      files: {}
+    }, null, 2),
   };
 
   const handleCreate = async () => {
@@ -397,7 +443,11 @@ function NewFileDialog({ parentPath, onClose, onSuccess }: NewFileDialogProps) {
     setError(null);
 
     try {
-      const filePath = `${parentPath}/${fileName}`;
+      let finalFileName = fileName;
+      if (template === "drawing" && !fileName.endsWith(".excalidraw")) {
+        finalFileName = fileName.includes(".") ? fileName.replace(/\.[^.]+$/, ".excalidraw") : `${fileName}.excalidraw`;
+      }
+      const filePath = `${parentPath}/${finalFileName}`;
       const content = templates[template] || "";
       await invoke("create_file", { path: filePath, content });
       onSuccess();
@@ -430,7 +480,7 @@ function NewFileDialog({ parentPath, onClose, onSuccess }: NewFileDialogProps) {
               type="text"
               value={fileName}
               onChange={(e) => setFileName(e.target.value)}
-              placeholder="example.md"
+              placeholder={template === "drawing" ? "my-drawing" : "example.md"}
               className="w-full px-2 py-1.5 text-xs bg-[var(--geist-background)] border border-[var(--geist-accents-2)] rounded focus:outline-none focus:border-[var(--geist-accents-4)]"
               autoFocus
               onKeyDown={(e) => e.key === "Enter" && handleCreate()}
@@ -447,6 +497,7 @@ function NewFileDialog({ parentPath, onClose, onSuccess }: NewFileDialogProps) {
               <option value="markdown">Markdown</option>
               <option value="yaml">YAML</option>
               <option value="json">JSON</option>
+              <option value="drawing">Drawing</option>
             </select>
           </div>
 
@@ -970,11 +1021,7 @@ export function ResourceBoard() {
 
   const handleCopyPath = async (node: FileNode) => {
     try {
-      // Extract relative path (resources/...)
-      const pathParts = node.path.split('/resources/');
-      const relativePath = pathParts.length > 1 ? `resources/${pathParts[1]}` : node.path;
-
-      await navigator.clipboard.writeText(relativePath);
+      await navigator.clipboard.writeText(node.path);
       showToast("Copied to clipboard", "success");
     } catch (err) {
       showToast("Failed to copy path", "error");
