@@ -152,7 +152,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, Props>(
 
     return (
       <div
-        className="h-full w-full flex flex-col rounded-lg overflow-hidden border border-[var(--geist-accents-2)] animate-fade-in"
+        className="h-full w-full flex flex-col overflow-hidden"
         role="region"
         aria-label="Markdown editor"
       >
