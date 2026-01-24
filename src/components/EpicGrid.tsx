@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useAppStore } from "../lib/store";
-import { BookOpen, CheckCircle2, Circle, Pencil, X } from "lucide-react";
+import { BookOpen, CheckCircle2, Circle, Pencil, X, Copy, Check } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { confirm } from "@tauri-apps/plugin-dialog";
 
@@ -11,6 +12,7 @@ export function EpicGrid() {
   const setPrdState = useAppStore((s) => s.setPrdState);
   const setViewMode = useAppStore((s) => s.setViewMode);
   const projectPath = useAppStore((s) => s.projectPath);
+  const [copiedEpicId, setCopiedEpicId] = useState<string | null>(null);
 
   const sortedEpics = [...epics].sort((a, b) => {
     const numA = parseInt(a.id.replace(/\D/g, ""), 10) || 0;
@@ -27,6 +29,23 @@ export function EpicGrid() {
 
   const handleEpicClick = (epicId: string) => {
     setSelectedEpic(epicId);
+  };
+
+  const handleCopyPath = async (e: React.MouseEvent, epic: typeof epics[0]) => {
+    e.stopPropagation();
+    if (!projectPath) return;
+
+    try {
+      const files = await invoke<string[]>("list_epic_files", { projectPath });
+      const epicFile = files.find(f => f.includes(epic.id));
+      if (epicFile) {
+        await navigator.clipboard.writeText(epicFile);
+        setCopiedEpicId(epic.id);
+        setTimeout(() => setCopiedEpicId(null), 1500);
+      }
+    } catch (err) {
+      console.error("Failed to copy epic path:", err);
+    }
   };
 
   const handleEdit = async (e: React.MouseEvent, epic: typeof epics[0]) => {
@@ -127,6 +146,17 @@ export function EpicGrid() {
                   <span className="text-[10px] text-[var(--geist-accents-4)] font-mono">{epic.id}</span>
                   <span className="text-[10px] text-[var(--geist-accents-4)]">{stats.completed}/{stats.total}</span>
                   <div className="flex items-center gap-0.5 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={(e) => handleCopyPath(e, epic)}
+                      className="p-1 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors"
+                      title="Copy path"
+                    >
+                      {copiedEpicId === epic.id ? (
+                        <Check size={14} className="text-[var(--monokai-green)]" />
+                      ) : (
+                        <Copy size={14} />
+                      )}
+                    </button>
                     <button
                       onClick={(e) => handleEdit(e, epic)}
                       className="p-1 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors"
