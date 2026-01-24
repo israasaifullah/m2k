@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useAppStore, Theme } from "../lib/store";
+import { useAppStore, Theme, FontSize, FONT_SIZE_VALUES } from "../lib/store";
 import { Toast, useToast } from "./Toast";
 import { Toggle } from "./Toggle";
-import { X, Sun, Moon, Palette } from "lucide-react";
+import { X, Sun, Moon, Palette, Type } from "lucide-react";
 import packageJson from "../../package.json";
 
 const THEMES: { value: Theme; label: string; icon: React.ReactNode }[] = [
@@ -12,6 +12,12 @@ const THEMES: { value: Theme; label: string; icon: React.ReactNode }[] = [
   { value: "light", label: "Light", icon: <Sun size={14} /> },
   { value: "dracula", label: "Dracula", icon: <Palette size={14} /> },
   { value: "nord", label: "Nord", icon: <Palette size={14} /> },
+];
+
+const FONT_SIZES: { value: FontSize; label: string }[] = [
+  { value: "small", label: "Small" },
+  { value: "medium", label: "Medium" },
+  { value: "large", label: "Large" },
 ];
 
 interface ProjectSettings {
@@ -32,6 +38,8 @@ export function SettingsPage() {
   const setVimMode = useAppStore((s) => s.setVimMode);
   const theme = useAppStore((s) => s.theme);
   const setTheme = useAppStore((s) => s.setTheme);
+  const fontSize = useAppStore((s) => s.fontSize);
+  const setFontSize = useAppStore((s) => s.setFontSize);
   const projectPath = useAppStore((s) => s.projectPath);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -187,6 +195,21 @@ export function SettingsPage() {
     }
   };
 
+  const handleFontSizeChange = async (newSize: FontSize) => {
+    setFontSize(newSize);
+    const sizeValue = FONT_SIZE_VALUES[newSize];
+    document.documentElement.style.setProperty("--font-size-base", `${sizeValue}px`);
+
+    try {
+      await invoke("set_app_state_value", {
+        key: "font_size",
+        value: newSize,
+      });
+    } catch (err) {
+      console.error("Failed to persist font size:", err);
+    }
+  };
+
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -235,6 +258,31 @@ export function SettingsPage() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="mt-4">
+              <label className="text-xs font-medium text-[var(--geist-foreground)] block mb-2">
+                Font Size
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {FONT_SIZES.map((f) => (
+                  <button
+                    key={f.value}
+                    onClick={() => handleFontSizeChange(f.value)}
+                    className={`flex items-center justify-center gap-2 px-3 py-2 text-xs rounded border transition-colors ${
+                      fontSize === f.value
+                        ? "border-[var(--monokai-green)] bg-[var(--geist-accents-2)] text-[var(--geist-foreground)]"
+                        : "border-[var(--geist-accents-3)] text-[var(--geist-accents-5)] hover:border-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)]"
+                    }`}
+                  >
+                    <Type size={14} />
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[10px] text-[var(--geist-accents-4)] mt-1">
+                {FONT_SIZE_VALUES[fontSize]}px base size
+              </p>
             </div>
           </div>
 

@@ -12,6 +12,13 @@ export interface RegisteredProject {
 export type ViewMode = "kanban" | "prd" | "settings" | "resources";
 export type PrdDocType = "epic" | "ticket";
 export type Theme = "dark" | "light" | "dracula" | "nord";
+export type FontSize = "small" | "medium" | "large";
+
+export const FONT_SIZE_VALUES: Record<FontSize, number> = {
+  small: 12,
+  medium: 14,
+  large: 16,
+};
 
 interface PrdState {
   mode: "create" | "edit";
@@ -30,6 +37,7 @@ interface AppState {
   prdState: PrdState;
   vimMode: boolean;
   theme: Theme;
+  fontSize: FontSize;
   registeredProjects: RegisteredProject[];
   activeProjectId: number | null;
   sidebarCollapsed: boolean;
@@ -47,6 +55,7 @@ interface AppState {
   resetPrdState: () => void;
   setVimMode: (enabled: boolean) => void;
   setTheme: (theme: Theme) => void;
+  setFontSize: (size: FontSize) => void;
   setRegisteredProjects: (projects: RegisteredProject[]) => void;
   setActiveProjectId: (id: number | null) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
@@ -74,6 +83,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   prdState: { ...defaultPrdState },
   vimMode: true,
   theme: "dark",
+  fontSize: "medium",
   registeredProjects: [],
   activeProjectId: null,
   sidebarCollapsed: false,
@@ -95,6 +105,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   resetPrdState: () => set({ prdState: { ...defaultPrdState } }),
   setVimMode: (enabled) => set({ vimMode: enabled }),
   setTheme: (theme) => set({ theme }),
+  setFontSize: (fontSize) => set({ fontSize }),
   setRegisteredProjects: (projects) => set({ registeredProjects: projects }),
   setActiveProjectId: (id) => set({ activeProjectId: id }),
   setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),

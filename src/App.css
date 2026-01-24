@@ -2,6 +2,14 @@
 
 :root {
   font-family: "Fira Code", monospace;
+
+  /* Dynamic font sizes */
+  --font-size-base: 14px;
+  --font-size-xs: calc(var(--font-size-base) * 0.714);   /* 10px at 14 */
+  --font-size-sm: calc(var(--font-size-base) * 0.857);   /* 12px at 14 */
+  --font-size-md: var(--font-size-base);                  /* 14px */
+  --font-size-lg: calc(var(--font-size-base) * 1.143);   /* 16px at 14 */
+
   /* Monokai color scheme (default dark) */
   --geist-background: #272822;
   --geist-foreground: #F8F8F2;
