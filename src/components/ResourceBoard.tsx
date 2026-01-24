@@ -338,10 +338,11 @@ interface ContextMenuProps {
   onCopyPath: (node: FileNode) => void;
   onUploadToFolder?: (node: FileNode) => void;
   onNewFileInFolder?: (node: FileNode) => void;
+  onNewFolderInFolder?: (node: FileNode) => void;
   onCopyToProject?: (node: FileNode) => void;
 }
 
-function ContextMenu({ node, x, y, onClose, onRename, onDelete, onCopyPath, onUploadToFolder, onNewFileInFolder, onCopyToProject }: ContextMenuProps) {
+function ContextMenu({ node, x, y, onClose, onRename, onDelete, onCopyPath, onUploadToFolder, onNewFileInFolder, onNewFolderInFolder, onCopyToProject }: ContextMenuProps) {
   useEffect(() => {
     const handleClick = () => onClose();
     const handleEscape = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -366,6 +367,15 @@ function ContextMenu({ node, x, y, onClose, onRename, onDelete, onCopyPath, onUp
         >
           <Plus size={14} />
           New File Here
+        </button>
+      )}
+      {node.isDirectory && onNewFolderInFolder && (
+        <button
+          onClick={() => { onNewFolderInFolder(node); onClose(); }}
+          className="w-full px-4 py-2 text-sm text-left hover:bg-[var(--geist-accents-1)] flex items-center gap-2"
+        >
+          <Folder size={14} />
+          New Folder Here
         </button>
       )}
       {node.isDirectory && onUploadToFolder && (
@@ -954,6 +964,7 @@ export function ResourceBoard() {
   const [showNewFileDialog, setShowNewFileDialog] = useState(false);
   const [newFileParentPath, setNewFileParentPath] = useState<string>("");
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
+  const [newFolderParentPath, setNewFolderParentPath] = useState<string>("");
   const [renameNode, setRenameNode] = useState<FileNode | null>(null);
   const [deleteNode, setDeleteNode] = useState<FileNode | null>(null);
   const [copyToProjectNode, setCopyToProjectNode] = useState<FileNode | null>(null);
@@ -1098,6 +1109,11 @@ export function ResourceBoard() {
     setShowNewFileDialog(true);
   };
 
+  const handleNewFolderInFolder = (node: FileNode) => {
+    setNewFolderParentPath(node.path);
+    setShowNewFolderDialog(true);
+  };
+
   const handleCopyToProject = (node: FileNode) => {
     setCopyToProjectNode(node);
   };
@@ -1168,10 +1184,20 @@ export function ResourceBoard() {
                 setNewFileParentPath(resourcePath);
                 setShowNewFileDialog(true);
               }}
-              className="p-1.5 mr-1 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors"
+              className="p-1.5 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors"
               title="New file"
             >
               <Plus size={14} />
+            </button>
+            <button
+              onClick={() => {
+                setNewFolderParentPath(resourcePath);
+                setShowNewFolderDialog(true);
+              }}
+              className="p-1.5 mr-1 text-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)] transition-colors"
+              title="New folder"
+            >
+              <Folder size={14} />
             </button>
         </div>
         {uploadProgress.length > 0 && (
@@ -1244,8 +1270,11 @@ export function ResourceBoard() {
 
       {showNewFolderDialog && (
         <NewFolderDialog
-          parentPath={resourcePath}
-          onClose={() => setShowNewFolderDialog(false)}
+          parentPath={newFolderParentPath || resourcePath}
+          onClose={() => {
+            setShowNewFolderDialog(false);
+            setNewFolderParentPath("");
+          }}
           onSuccess={handleRefresh}
         />
       )}
@@ -1277,6 +1306,7 @@ export function ResourceBoard() {
           onCopyPath={handleCopyPath}
           onUploadToFolder={handleUploadToFolder}
           onNewFileInFolder={handleNewFileInFolder}
+          onNewFolderInFolder={handleNewFolderInFolder}
           onCopyToProject={handleCopyToProject}
         />
       )}
