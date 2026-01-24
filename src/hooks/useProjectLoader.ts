@@ -2,13 +2,21 @@ import { useEffect, useCallback, useRef, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open, confirm } from "@tauri-apps/plugin-dialog";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useAppStore, RegisteredProject, Theme } from "../lib/store";
 import { loadConfig, saveConfig } from "../lib/config";
 import { debounce } from "../lib/debounce";
 import type { Ticket, Epic } from "../types";
 
-function applyTheme(theme: Theme) {
+async function applyTheme(theme: Theme) {
   document.documentElement.setAttribute("data-theme", theme === "dark" ? "" : theme);
+  // Set window theme (toolbar color)
+  const windowTheme = theme === "light" ? "light" : "dark";
+  try {
+    await getCurrentWindow().setTheme(windowTheme);
+  } catch (err) {
+    console.error("Failed to set window theme:", err);
+  }
 }
 
 export function useProjectLoader() {
@@ -265,7 +273,7 @@ export function useProjectLoader() {
         const savedTheme = await invoke<string | null>("get_app_state_value", { key: "theme" });
         if (savedTheme && ["dark", "light", "dracula", "nord"].includes(savedTheme)) {
           setTheme(savedTheme as Theme);
-          applyTheme(savedTheme as Theme);
+          await applyTheme(savedTheme as Theme);
         }
       } catch (e) {
         console.error("Failed to restore theme:", e);

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useAppStore, Theme } from "../lib/store";
 import { Toast, useToast } from "./Toast";
 import { Toggle } from "./Toggle";
@@ -167,6 +168,15 @@ export function SettingsPage() {
   const handleThemeChange = async (newTheme: Theme) => {
     setTheme(newTheme);
     document.documentElement.setAttribute("data-theme", newTheme === "dark" ? "" : newTheme);
+
+    // Set window theme (toolbar color)
+    const windowTheme = newTheme === "light" ? "light" : "dark";
+    try {
+      await getCurrentWindow().setTheme(windowTheme);
+    } catch (err) {
+      console.error("Failed to set window theme:", err);
+    }
+
     try {
       await invoke("set_app_state_value", {
         key: "theme",
