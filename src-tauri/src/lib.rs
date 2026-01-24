@@ -764,7 +764,7 @@ fn delete_folder(path: String) -> Result<(), String> {
 
 #[tauri::command]
 fn list_epic_files(project_path: String) -> Result<Vec<String>, String> {
-    let epics_dir = Path::new(&project_path).join("epics");
+    let epics_dir = Path::new(&project_path).join(".m2k").join("epics");
 
     if !epics_dir.exists() {
         return Ok(Vec::new());
