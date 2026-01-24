@@ -96,10 +96,23 @@
   --monokai-comment: #4c566a;
 }
 
+html {
+  font-size: var(--font-size-base);
+}
+
 body {
   background: var(--geist-background);
   color: var(--geist-foreground);
+  font-size: var(--font-size-base);
 }
+
+/* Override Tailwind text sizes to use dynamic font variables */
+.text-\[10px\] { font-size: var(--font-size-xs) !important; }
+.text-\[11px\] { font-size: var(--font-size-xs) !important; }
+.text-xs { font-size: var(--font-size-xs) !important; }
+.text-sm { font-size: var(--font-size-sm) !important; }
+.text-base { font-size: var(--font-size-md) !important; }
+.text-lg { font-size: var(--font-size-lg) !important; }
 
 code, pre, .font-mono {
   font-family: "Fira Code", monospace;
