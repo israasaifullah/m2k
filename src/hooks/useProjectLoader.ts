@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open, confirm } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useAppStore, RegisteredProject, Theme } from "../lib/store";
+import { useAppStore, RegisteredProject, Theme, FontSize, FONT_SIZE_VALUES } from "../lib/store";
 import { loadConfig, saveConfig } from "../lib/config";
 import { debounce } from "../lib/debounce";
 import type { Ticket, Epic } from "../types";
@@ -19,6 +19,11 @@ async function applyTheme(theme: Theme) {
   }
 }
 
+function applyFontSize(size: FontSize) {
+  const sizeValue = FONT_SIZE_VALUES[size];
+  document.documentElement.style.setProperty("--font-size-base", `${sizeValue}px`);
+}
+
 export function useProjectLoader() {
   const setProjectPath = useAppStore((s) => s.setProjectPath);
   const setTickets = useAppStore((s) => s.setTickets);
@@ -30,6 +35,7 @@ export function useProjectLoader() {
   const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed);
   const setProjectLoading = useAppStore((s) => s.setProjectLoading);
   const setTheme = useAppStore((s) => s.setTheme);
+  const setFontSize = useAppStore((s) => s.setFontSize);
   const prevSidebarCollapsed = useRef<boolean | null>(null);
 
   const validateProjectPath = useCallback(async (path: string): Promise<boolean> => {
@@ -277,6 +283,17 @@ export function useProjectLoader() {
         }
       } catch (e) {
         console.error("Failed to restore theme:", e);
+      }
+
+      // Restore font size
+      try {
+        const savedFontSize = await invoke<string | null>("get_app_state_value", { key: "font_size" });
+        if (savedFontSize && ["small", "medium", "large", "xlarge"].includes(savedFontSize)) {
+          setFontSize(savedFontSize as FontSize);
+          applyFontSize(savedFontSize as FontSize);
+        }
+      } catch (e) {
+        console.error("Failed to restore font size:", e);
       }
 
       // Try to restore active project from app state

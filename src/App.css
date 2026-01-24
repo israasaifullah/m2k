@@ -2,6 +2,14 @@
 
 :root {
   font-family: "Fira Code", monospace;
+
+  /* Dynamic font sizes */
+  --font-size-base: 20px;
+  --font-size-xs: calc(var(--font-size-base) * 0.5);     /* 10px at 20 */
+  --font-size-sm: calc(var(--font-size-base) * 0.6);     /* 12px at 20 */
+  --font-size-md: var(--font-size-base);                  /* 20px */
+  --font-size-lg: calc(var(--font-size-base) * 1.2);     /* 24px at 20 */
+
   /* Monokai color scheme (default dark) */
   --geist-background: #272822;
   --geist-foreground: #F8F8F2;
@@ -88,10 +96,23 @@
   --monokai-comment: #4c566a;
 }
 
+html {
+  font-size: var(--font-size-base);
+}
+
 body {
   background: var(--geist-background);
   color: var(--geist-foreground);
+  font-size: var(--font-size-base);
 }
+
+/* Override Tailwind text sizes to use dynamic font variables */
+.text-\[10px\] { font-size: var(--font-size-xs) !important; }
+.text-\[11px\] { font-size: var(--font-size-xs) !important; }
+.text-xs { font-size: var(--font-size-xs) !important; }
+.text-sm { font-size: var(--font-size-sm) !important; }
+.text-base { font-size: var(--font-size-md) !important; }
+.text-lg { font-size: var(--font-size-lg) !important; }
 
 code, pre, .font-mono {
   font-family: "Fira Code", monospace;
