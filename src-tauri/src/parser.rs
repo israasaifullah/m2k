@@ -17,11 +17,13 @@ pub struct Ticket {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Epic {
     pub id: String,
     pub title: String,
     pub scope: String,
     pub tickets: Vec<String>,
+    pub file_path: String,
 }
 
 pub fn parse_tickets(project_path: &str) -> Result<Vec<Ticket>, String> {
@@ -172,6 +174,7 @@ pub fn parse_epic_file(path: &Path) -> Option<Epic> {
         title,
         scope,
         tickets,
+        file_path: path.to_string_lossy().to_string(),
     })
 }
 

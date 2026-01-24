@@ -534,7 +534,7 @@ pub fn upsert_ticket(ticket: &Ticket) -> Result<(), String> {
 pub fn get_all_epics_snapshot(project_path: &str) -> Result<Vec<Epic>, String> {
     with_connection(|conn| {
         let mut stmt = conn.prepare(
-            "SELECT epic_id, title, scope FROM epics WHERE file_path LIKE ?1"
+            "SELECT epic_id, title, scope, file_path FROM epics WHERE file_path LIKE ?1"
         )?;
 
         let pattern = format!("{}%", project_path);
@@ -544,6 +544,7 @@ pub fn get_all_epics_snapshot(project_path: &str) -> Result<Vec<Epic>, String> {
                 title: row.get(1)?,
                 scope: row.get(2)?,
                 tickets: Vec::new(),
+                file_path: row.get(3)?,
             })
         })?;
 

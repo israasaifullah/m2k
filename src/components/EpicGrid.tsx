@@ -33,16 +33,10 @@ export function EpicGrid() {
 
   const handleCopyPath = async (e: React.MouseEvent, epic: typeof epics[0]) => {
     e.stopPropagation();
-    if (!projectPath) return;
-
     try {
-      const files = await invoke<string[]>("list_epic_files", { projectPath });
-      const epicFile = files.find(f => f.includes(epic.id));
-      if (epicFile) {
-        await navigator.clipboard.writeText(epicFile);
-        setCopiedEpicId(epic.id);
-        setTimeout(() => setCopiedEpicId(null), 1500);
-      }
+      await navigator.clipboard.writeText(epic.filePath);
+      setCopiedEpicId(epic.id);
+      setTimeout(() => setCopiedEpicId(null), 1500);
     } catch (err) {
       console.error("Failed to copy epic path:", err);
     }

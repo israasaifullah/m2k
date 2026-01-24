@@ -365,6 +365,7 @@ export function PRDMode() {
           title: title,
           scope: scope,
           tickets: [],
+          filePath: filePath,
         };
         setEpics([...epics, newEpic]);
 
