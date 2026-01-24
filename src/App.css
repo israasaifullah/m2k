@@ -2,7 +2,7 @@
 
 :root {
   font-family: "Fira Code", monospace;
-  /* Monokai color scheme */
+  /* Monokai color scheme (default dark) */
   --geist-background: #272822;
   --geist-foreground: #F8F8F2;
   --geist-accents-1: #1e1f1c;
@@ -23,6 +23,69 @@
   --geist-success: var(--monokai-green);
   --geist-error: var(--monokai-red);
   --geist-warning: var(--monokai-orange);
+}
+
+/* Light Theme */
+[data-theme="light"] {
+  --geist-background: #fafafa;
+  --geist-foreground: #1a1a1a;
+  --geist-accents-1: #ffffff;
+  --geist-accents-2: #e5e5e5;
+  --geist-accents-3: #d4d4d4;
+  --geist-accents-4: #a3a3a3;
+  --geist-accents-5: #737373;
+  --geist-accents-6: #525252;
+  --geist-accents-7: #404040;
+  --geist-accents-8: #262626;
+  --monokai-red: #d63384;
+  --monokai-orange: #d97706;
+  --monokai-yellow: #ca8a04;
+  --monokai-green: #16a34a;
+  --monokai-cyan: #0891b2;
+  --monokai-purple: #7c3aed;
+  --monokai-comment: #737373;
+}
+
+/* Dracula Theme */
+[data-theme="dracula"] {
+  --geist-background: #282a36;
+  --geist-foreground: #f8f8f2;
+  --geist-accents-1: #21222c;
+  --geist-accents-2: #343746;
+  --geist-accents-3: #44475a;
+  --geist-accents-4: #6272a4;
+  --geist-accents-5: #9ea5c2;
+  --geist-accents-6: #c0c5d8;
+  --geist-accents-7: #f1fa8c;
+  --geist-accents-8: #f8f8f2;
+  --monokai-red: #ff5555;
+  --monokai-orange: #ffb86c;
+  --monokai-yellow: #f1fa8c;
+  --monokai-green: #50fa7b;
+  --monokai-cyan: #8be9fd;
+  --monokai-purple: #bd93f9;
+  --monokai-comment: #6272a4;
+}
+
+/* Nord Theme */
+[data-theme="nord"] {
+  --geist-background: #2e3440;
+  --geist-foreground: #eceff4;
+  --geist-accents-1: #242933;
+  --geist-accents-2: #3b4252;
+  --geist-accents-3: #434c5e;
+  --geist-accents-4: #4c566a;
+  --geist-accents-5: #8a93a3;
+  --geist-accents-6: #b8c0cf;
+  --geist-accents-7: #ebcb8b;
+  --geist-accents-8: #eceff4;
+  --monokai-red: #bf616a;
+  --monokai-orange: #d08770;
+  --monokai-yellow: #ebcb8b;
+  --monokai-green: #a3be8c;
+  --monokai-cyan: #88c0d0;
+  --monokai-purple: #b48ead;
+  --monokai-comment: #4c566a;
 }
 
 body {

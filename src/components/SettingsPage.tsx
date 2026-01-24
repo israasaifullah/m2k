@@ -1,10 +1,18 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { useAppStore } from "../lib/store";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { useAppStore, Theme } from "../lib/store";
 import { Toast, useToast } from "./Toast";
 import { Toggle } from "./Toggle";
-import { X } from "lucide-react";
+import { X, Sun, Moon, Palette } from "lucide-react";
 import packageJson from "../../package.json";
+
+const THEMES: { value: Theme; label: string; icon: React.ReactNode }[] = [
+  { value: "dark", label: "Monokai Dark", icon: <Moon size={14} /> },
+  { value: "light", label: "Light", icon: <Sun size={14} /> },
+  { value: "dracula", label: "Dracula", icon: <Palette size={14} /> },
+  { value: "nord", label: "Nord", icon: <Palette size={14} /> },
+];
 
 interface ProjectSettings {
   project_path: string;
@@ -22,6 +30,8 @@ export function SettingsPage() {
   const setViewMode = useAppStore((s) => s.setViewMode);
   const vimMode = useAppStore((s) => s.vimMode);
   const setVimMode = useAppStore((s) => s.setVimMode);
+  const theme = useAppStore((s) => s.theme);
+  const setTheme = useAppStore((s) => s.setTheme);
   const projectPath = useAppStore((s) => s.projectPath);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -155,6 +165,28 @@ export function SettingsPage() {
     }
   };
 
+  const handleThemeChange = async (newTheme: Theme) => {
+    setTheme(newTheme);
+    document.documentElement.setAttribute("data-theme", newTheme === "dark" ? "" : newTheme);
+
+    // Set window theme (toolbar color)
+    const windowTheme = newTheme === "light" ? "light" : "dark";
+    try {
+      await getCurrentWindow().setTheme(windowTheme);
+    } catch (err) {
+      console.error("Failed to set window theme:", err);
+    }
+
+    try {
+      await invoke("set_app_state_value", {
+        key: "theme",
+        value: newTheme,
+      });
+    } catch (err) {
+      console.error("Failed to persist theme:", err);
+    }
+  };
+
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -178,6 +210,34 @@ export function SettingsPage() {
 
       <div className="flex-1 min-h-0 p-4 overflow-auto">
         <div className="max-w-2xl mx-auto space-y-4">
+          {/* Appearance */}
+          <div className="bg-[var(--geist-accents-1)] border border-[var(--geist-accents-2)] rounded-lg p-4">
+            <h2 className="text-sm font-medium text-[var(--geist-foreground)] mb-3">
+              Appearance
+            </h2>
+            <div>
+              <label className="text-xs font-medium text-[var(--geist-foreground)] block mb-2">
+                Theme
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {THEMES.map((t) => (
+                  <button
+                    key={t.value}
+                    onClick={() => handleThemeChange(t.value)}
+                    className={`flex items-center gap-2 px-3 py-2 text-xs rounded border transition-colors ${
+                      theme === t.value
+                        ? "border-[var(--monokai-green)] bg-[var(--geist-accents-2)] text-[var(--geist-foreground)]"
+                        : "border-[var(--geist-accents-3)] text-[var(--geist-accents-5)] hover:border-[var(--geist-accents-4)] hover:text-[var(--geist-foreground)]"
+                    }`}
+                  >
+                    {t.icon}
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* Editor Settings */}
           <div className="bg-[var(--geist-accents-1)] border border-[var(--geist-accents-2)] rounded-lg p-4">
             <h2 className="text-sm font-medium text-[var(--geist-foreground)] mb-3">
