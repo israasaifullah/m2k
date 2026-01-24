@@ -11,6 +11,7 @@ export interface RegisteredProject {
 
 export type ViewMode = "kanban" | "prd" | "settings" | "resources";
 export type PrdDocType = "epic" | "ticket";
+export type Theme = "dark" | "light" | "dracula" | "nord";
 
 interface PrdState {
   mode: "create" | "edit";
@@ -28,6 +29,7 @@ interface AppState {
   viewMode: ViewMode;
   prdState: PrdState;
   vimMode: boolean;
+  theme: Theme;
   registeredProjects: RegisteredProject[];
   activeProjectId: number | null;
   sidebarCollapsed: boolean;
@@ -44,6 +46,7 @@ interface AppState {
   setPrdState: (state: Partial<PrdState>) => void;
   resetPrdState: () => void;
   setVimMode: (enabled: boolean) => void;
+  setTheme: (theme: Theme) => void;
   setRegisteredProjects: (projects: RegisteredProject[]) => void;
   setActiveProjectId: (id: number | null) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
@@ -70,6 +73,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   viewMode: "kanban",
   prdState: { ...defaultPrdState },
   vimMode: true,
+  theme: "dark",
   registeredProjects: [],
   activeProjectId: null,
   sidebarCollapsed: false,
@@ -90,6 +94,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setPrdState: (state) => set((s) => ({ prdState: { ...s.prdState, ...state } })),
   resetPrdState: () => set({ prdState: { ...defaultPrdState } }),
   setVimMode: (enabled) => set({ vimMode: enabled }),
+  setTheme: (theme) => set({ theme }),
   setRegisteredProjects: (projects) => set({ registeredProjects: projects }),
   setActiveProjectId: (id) => set({ activeProjectId: id }),
   setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),

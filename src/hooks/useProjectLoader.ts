@@ -2,10 +2,14 @@ import { useEffect, useCallback, useRef, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { open, confirm } from "@tauri-apps/plugin-dialog";
-import { useAppStore, RegisteredProject } from "../lib/store";
+import { useAppStore, RegisteredProject, Theme } from "../lib/store";
 import { loadConfig, saveConfig } from "../lib/config";
 import { debounce } from "../lib/debounce";
 import type { Ticket, Epic } from "../types";
+
+function applyTheme(theme: Theme) {
+  document.documentElement.setAttribute("data-theme", theme === "dark" ? "" : theme);
+}
 
 export function useProjectLoader() {
   const setProjectPath = useAppStore((s) => s.setProjectPath);
@@ -17,6 +21,7 @@ export function useProjectLoader() {
   const setSidebarCollapsed = useAppStore((s) => s.setSidebarCollapsed);
   const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed);
   const setProjectLoading = useAppStore((s) => s.setProjectLoading);
+  const setTheme = useAppStore((s) => s.setTheme);
   const prevSidebarCollapsed = useRef<boolean | null>(null);
 
   const validateProjectPath = useCallback(async (path: string): Promise<boolean> => {
@@ -253,6 +258,17 @@ export function useProjectLoader() {
         }
       } catch (e) {
         console.error("Failed to restore sidebar state:", e);
+      }
+
+      // Restore theme
+      try {
+        const savedTheme = await invoke<string | null>("get_app_state_value", { key: "theme" });
+        if (savedTheme && ["dark", "light", "dracula", "nord"].includes(savedTheme)) {
+          setTheme(savedTheme as Theme);
+          applyTheme(savedTheme as Theme);
+        }
+      } catch (e) {
+        console.error("Failed to restore theme:", e);
       }
 
       // Try to restore active project from app state
