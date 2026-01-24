@@ -12,12 +12,13 @@ export interface RegisteredProject {
 export type ViewMode = "kanban" | "prd" | "settings" | "resources";
 export type PrdDocType = "epic" | "ticket";
 export type Theme = "dark" | "light" | "dracula" | "nord";
-export type FontSize = "small" | "medium" | "large";
+export type FontSize = "small" | "medium" | "large" | "xlarge";
 
 export const FONT_SIZE_VALUES: Record<FontSize, number> = {
-  small: 12,
-  medium: 14,
-  large: 16,
+  small: 13,
+  medium: 15,
+  large: 17,
+  xlarge: 19,
 };
 
 interface PrdState {

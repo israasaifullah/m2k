@@ -288,7 +288,7 @@ export function useProjectLoader() {
       // Restore font size
       try {
         const savedFontSize = await invoke<string | null>("get_app_state_value", { key: "font_size" });
-        if (savedFontSize && ["small", "medium", "large"].includes(savedFontSize)) {
+        if (savedFontSize && ["small", "medium", "large", "xlarge"].includes(savedFontSize)) {
           setFontSize(savedFontSize as FontSize);
           applyFontSize(savedFontSize as FontSize);
         }

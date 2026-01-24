@@ -4,11 +4,11 @@
   font-family: "Fira Code", monospace;
 
   /* Dynamic font sizes */
-  --font-size-base: 14px;
-  --font-size-xs: calc(var(--font-size-base) * 0.714);   /* 10px at 14 */
-  --font-size-sm: calc(var(--font-size-base) * 0.857);   /* 12px at 14 */
-  --font-size-md: var(--font-size-base);                  /* 14px */
-  --font-size-lg: calc(var(--font-size-base) * 1.143);   /* 16px at 14 */
+  --font-size-base: 15px;
+  --font-size-xs: calc(var(--font-size-base) * 0.667);   /* ~10px at 15 */
+  --font-size-sm: calc(var(--font-size-base) * 0.8);     /* 12px at 15 */
+  --font-size-md: var(--font-size-base);                  /* 15px */
+  --font-size-lg: calc(var(--font-size-base) * 1.133);   /* ~17px at 15 */
 
   /* Monokai color scheme (default dark) */
   --geist-background: #272822;

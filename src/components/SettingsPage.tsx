@@ -18,6 +18,7 @@ const FONT_SIZES: { value: FontSize; label: string }[] = [
   { value: "small", label: "Small" },
   { value: "medium", label: "Medium" },
   { value: "large", label: "Large" },
+  { value: "xlarge", label: "X-Large" },
 ];
 
 interface ProjectSettings {
@@ -264,7 +265,7 @@ export function SettingsPage() {
               <label className="text-xs font-medium text-[var(--geist-foreground)] block mb-2">
                 Font Size
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-4 gap-2">
                 {FONT_SIZES.map((f) => (
                   <button
                     key={f.value}
