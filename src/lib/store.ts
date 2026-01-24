@@ -15,10 +15,10 @@ export type Theme = "dark" | "light" | "dracula" | "nord";
 export type FontSize = "small" | "medium" | "large" | "xlarge";
 
 export const FONT_SIZE_VALUES: Record<FontSize, number> = {
-  small: 13,
-  medium: 15,
-  large: 17,
-  xlarge: 19,
+  small: 20,
+  medium: 25,
+  large: 30,
+  xlarge: 35,
 };
 
 interface PrdState {
