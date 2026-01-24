@@ -9,3 +9,4 @@
 |----|-------------|--------|
 | T-138 | Missing create new folder | done |
 | T-140 | Replace copy relative path into copy full path | done |
+| T-141 | Missing Copy Path icon in Epic card | done |
