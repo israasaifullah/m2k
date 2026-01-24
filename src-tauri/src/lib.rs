@@ -763,6 +763,32 @@ fn delete_folder(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn list_epic_files(project_path: String) -> Result<Vec<String>, String> {
+    let epics_dir = Path::new(&project_path).join("epics");
+
+    if !epics_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut files = Vec::new();
+    let entries = fs::read_dir(&epics_dir)
+        .map_err(|e| format!("Failed to read epics directory: {}", e))?;
+
+    for entry in entries {
+        if let Ok(entry) = entry {
+            let path = entry.path();
+            if path.is_file() && path.extension().map_or(false, |ext| ext == "md") {
+                if let Some(path_str) = path.to_str() {
+                    files.push(path_str.to_string());
+                }
+            }
+        }
+    }
+
+    Ok(files)
+}
+
+#[tauri::command]
 fn rename_file_or_folder(old_path: String, new_path: String) -> Result<(), String> {
     let old = Path::new(&old_path);
     let new = Path::new(&new_path);
@@ -1233,6 +1259,7 @@ pub fn run() {
             delete_file,
             create_folder,
             delete_folder,
+            list_epic_files,
             rename_file_or_folder,
             upload_resource,
             copy_resource_to_project,
