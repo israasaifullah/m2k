@@ -143,7 +143,7 @@ where
 }
 
 pub fn parse_epics(project_path: &str) -> Result<Vec<Epic>, String> {
-    let epics_path = Path::new(project_path).join(".m2k").join("epics");
+    let epics_path = Path::new(project_path).join("epics");
 
     if !epics_path.exists() {
         return Ok(Vec::new());
