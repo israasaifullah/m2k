@@ -94,10 +94,7 @@ export function TicketCard({ ticket }: Props) {
   const handleCopyPath = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      const relativePath = projectPath
-        ? ticket.filePath.replace(projectPath, '.')
-        : ticket.filePath;
-      await navigator.clipboard.writeText(relativePath);
+      await navigator.clipboard.writeText(ticket.filePath);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch (err) {
