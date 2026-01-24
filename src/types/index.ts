@@ -15,4 +15,5 @@ export interface Epic {
   title: string;
   scope: string;
   tickets: string[];
+  filePath: string;
 }

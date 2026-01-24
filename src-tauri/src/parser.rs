@@ -17,11 +17,13 @@ pub struct Ticket {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Epic {
     pub id: String,
     pub title: String,
     pub scope: String,
     pub tickets: Vec<String>,
+    pub file_path: String,
 }
 
 pub fn parse_tickets(project_path: &str) -> Result<Vec<Ticket>, String> {
@@ -141,7 +143,7 @@ where
 }
 
 pub fn parse_epics(project_path: &str) -> Result<Vec<Epic>, String> {
-    let epics_path = Path::new(project_path).join("epics");
+    let epics_path = Path::new(project_path).join(".m2k").join("epics");
 
     if !epics_path.exists() {
         return Ok(Vec::new());
@@ -172,6 +174,7 @@ pub fn parse_epic_file(path: &Path) -> Option<Epic> {
         title,
         scope,
         tickets,
+        file_path: path.to_string_lossy().to_string(),
     })
 }
 
